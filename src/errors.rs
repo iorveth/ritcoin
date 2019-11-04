@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub enum RitCoinErrror {
     IoError(std::io::Error),
     Base58Error(bs58::decode::Error),

@@ -3,7 +3,7 @@ use std::io::BufReader;
 use crate::RitCoinErrror;
 use sha2::{Sha256, Digest};
 use secp256k1::{rand::rngs::OsRng, SecretKey, Secp256k1, PublicKey, Message};
-use ripemd160::{Ripemd160, Digest};
+use ripemd160::Ripemd160;
 
 const NETWORK_ID: u8 = 0x00;
 
@@ -23,29 +23,29 @@ pub fn WIF_to_private_key_from_file(path: &str) -> Result<Vec<u8>, RitCoinErrror
     Ok(WIF_to_private_key(contents)?)
 }
 
-fn get_checksum(key: &[u8]) -> Result<&[u8], RitCoinErrror> {
+fn get_checksum(key: &[u8]) -> Result<Vec<u8>, RitCoinErrror> {
     let hasher = |value| {
         let mut hasher = Sha256::new();
         hasher.input(value);
         hasher.result()
     };
     let hash1 = hasher(key);
-    let hash2 = hasher(&hex::decode(&hash1[..])?);
-    Ok(&hash2[..4])
+    let hash2 = hasher(&hash1[..]);
+    Ok(hash2[..4].to_vec())
 }
 
 fn private_key_to_WIF(key: String) -> Result<String, RitCoinErrror> {
     let mut key = hex::decode(key)?;
     key.insert(0, 0x80);
     let checksum = get_checksum(&key)?;
-    key.extend_from_slice(checksum);
+    key.extend_from_slice(&checksum);
     Ok(bs58::encode(key).into_string())
 }
 
 fn WIF_to_private_key(key: String) -> Result<Vec<u8>, bs58::decode::Error> {
-    let mut key = bs58::decode(key).into_vec()?;
+    let key = bs58::decode(key).into_vec()?;
     let (private_key, _) = key.split_at(key.len() - 4);
-    Ok(private_key.to_vec())
+    Ok(private_key[1..].to_vec())
 }
 
 pub fn generate_ecdsa_key_pair() -> (SecretKey, PublicKey) {
@@ -80,10 +80,10 @@ pub fn get_address(public_key: &PublicKey) -> Result<String, RitCoinErrror> {
     sha256_hasher.input(public_key);
     let sha256_hash = sha256_hasher.result();
     let mut ripemd160_hasher = Ripemd160::new();
-    ripemd160_hasher.input(&hex::decode(&sha256_hash[..])?);
+    ripemd160_hasher.input(&sha256_hash[..]);
     let mut encrypted_pub_key = ripemd160_hasher.result().to_vec();
     encrypted_pub_key.insert(0, NETWORK_ID);
     let checksum = get_checksum(&encrypted_pub_key)?;
-    encrypted_pub_key.extend_from_slice(checksum);
+    encrypted_pub_key.extend_from_slice(&checksum);
     Ok(bs58::encode(encrypted_pub_key).into_string())
 }

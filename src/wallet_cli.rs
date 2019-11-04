@@ -2,8 +2,10 @@ use crate::RitCoinErrror;
 use crate::wallet;
 pub use std::fs::File;
 pub use std::io::prelude::*;
+use std::io::stdin;
+
 const PATH_TO_ADDRESS: &str = "data/address.txt";
-const FILE_NAME: &str = "privkey.txt";
+const FILE_NAME: &str = "data/privkey.txt";
 
 pub fn new() -> Result<(), RitCoinErrror> {
     let (private_key, public_key) = wallet::generate_ecdsa_key_pair();
@@ -11,6 +13,7 @@ pub fn new() -> Result<(), RitCoinErrror> {
     println!("{:?}", private_key);
     let mut file = File::create(PATH_TO_ADDRESS)?;
     write!(file, "{}", pub_address);
+    Ok(())
 }
 
 pub fn import(path: &str) -> Result<(), RitCoinErrror> {
@@ -20,24 +23,25 @@ pub fn import(path: &str) -> Result<(), RitCoinErrror> {
     println!("{:?}", private_key);
     let mut file = File::create(PATH_TO_ADDRESS)?;
     write!(file, "{}", pub_address);
+    Ok(())
 }
 
 fn read_cli(command: &str) -> Result<(), RitCoinErrror> {
     match command {
-        "new" => new()?,
+        "new" => new(),
         command if command.starts_with("import") => {
             let path = command.split_ascii_whitespace().collect::<Vec<&str>>()[1];
-            import(path)?
+            import(path)
         }
+        _ => return Ok(())
     }
-    Ok(())
 }
 
 pub fn cli() -> Result<(), RitCoinErrror> {
     loop {
         let mut buf = String::new();
         match stdin().read_line(&mut buf) {
-            Ok(_) => read_cli(&buf)?,
+            Ok(_) => read_cli(&buf.trim())?,
             Err(e) => {
                 eprintln!("{:?}", e);
                 break;

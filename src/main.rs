@@ -5,5 +5,7 @@ use wallet_cli::*;
 use errors::RitCoinErrror;
 
 fn main() {
-    wallet_cli::cli();
+    if let Err(e) = wallet_cli::cli() {
+        println!("{:?}", e)
+    };
 }
