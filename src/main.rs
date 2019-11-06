@@ -1,8 +1,10 @@
+mod errors;
+mod transaction;
+mod tx_validator;
 mod wallet;
 mod wallet_cli;
-mod errors;
-use wallet_cli::*;
 use errors::RitCoinErrror;
+use wallet_cli::*;
 
 fn main() {
     if let Err(e) = wallet_cli::cli() {

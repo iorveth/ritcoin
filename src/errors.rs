@@ -3,7 +3,8 @@ pub enum RitCoinErrror {
     IoError(std::io::Error),
     Base58Error(bs58::decode::Error),
     HexError(hex::FromHexError),
-    Secp256k1Error(secp256k1::Error)
+    Secp256k1Error(secp256k1::Error),
+    ParseIntError(std::num::ParseIntError),
 }
 
 impl From<bs58::decode::Error> for RitCoinErrror {
@@ -27,5 +28,11 @@ impl From<hex::FromHexError> for RitCoinErrror {
 impl From<secp256k1::Error> for RitCoinErrror {
     fn from(e: secp256k1::Error) -> Self {
         RitCoinErrror::Secp256k1Error(e)
+    }
+}
+
+impl From<std::num::ParseIntError> for RitCoinErrror {
+    fn from(e: std::num::ParseIntError) -> Self {
+        RitCoinErrror::ParseIntError(e)
     }
 }
