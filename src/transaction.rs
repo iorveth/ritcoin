@@ -24,7 +24,7 @@ impl CoinBaseTransaction for Transaction {
 
 impl Transaction {
     pub fn new(sender: String, recipient: String, amount: u32) -> Self {
-        Transaction {
+        Self {
             sender,
             recipient,
             amount,

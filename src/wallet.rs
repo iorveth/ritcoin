@@ -3,18 +3,17 @@ use crate::wallet_cli::*;
 use ripemd160::Ripemd160;
 use secp256k1::{rand::rngs::OsRng, Message, PublicKey, Secp256k1, SecretKey, Signature};
 use sha2::{Digest, Sha256};
-use std::io::BufReader;
 
 const NETWORK_ID: u8 = 0x00;
 const VERSION_NUMBER: u8 = 0x80;
 
 pub fn private_key_to_wif_from_file(path: &str) -> Result<String, RitCoinErrror<'static>> {
-    let mut private_key = fs::read_to_string(path)?;
+    let private_key = fs::read_to_string(path)?;
     private_key_to_wif(private_key)
 }
 
 pub fn wif_to_private_key_from_file(path: &str) -> Result<Vec<u8>, RitCoinErrror<'static>> {
-    let mut private_key_wif = fs::read_to_string(path)?;
+    let private_key_wif = fs::read_to_string(path)?;
     Ok(wif_to_private_key(private_key_wif)?)
 }
 

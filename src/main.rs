@@ -1,4 +1,7 @@
+mod block;
 mod errors;
+mod hash;
+mod merkle;
 mod pending_pool;
 mod serializer;
 mod transaction;
