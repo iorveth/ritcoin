@@ -1,9 +1,11 @@
 mod errors;
+mod pending_pool;
+mod serializer;
 mod transaction;
 mod tx_validator;
 mod wallet;
 mod wallet_cli;
-use errors::RitCoinErrror;
+use errors::*;
 use wallet_cli::*;
 
 fn main() {

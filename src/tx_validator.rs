@@ -8,7 +8,7 @@ pub fn validate_address(address: &str) -> bool {
 pub fn validate_addresses(
     transaction: &Transaction,
     public_key: &[u8],
-) -> Result<bool, RitCoinErrror> {
+) -> Result<bool, RitCoinErrror<'static>> {
     if validate_address(transaction.get_sender()) && validate_address(transaction.get_recipient()) {
         Ok(transaction.get_sender() == wallet::get_address(public_key)?)
     } else {
@@ -23,12 +23,15 @@ pub fn validate_signature(
     wallet::verify(&transaction.hash(), transaction.get_signature(), public_key)
 }
 
-pub fn validate(transaction: &Transaction, public_key: &[u8]) -> Result<bool, RitCoinErrror> {
+pub fn validate(
+    transaction: &Transaction,
+    public_key: &[u8],
+) -> Result<(), RitCoinErrror<'static>> {
     match (
         validate_addresses(transaction, public_key)?,
         validate_signature(transaction, public_key)?,
     ) {
-        (true, _) => Ok(true),
-        (false, _) => Ok(false),
+        (true, _) => Ok(()),
+        (false, _) => Err(RitCoinErrror::from("Addresses validation error occured")),
     }
 }

@@ -1,9 +1,9 @@
 use sha2::{Digest, Sha256};
-
+#[derive(Debug)]
 pub struct Transaction {
     sender: String,
     recipient: String,
-    amount: usize,
+    amount: u32,
     signature: Vec<u8>,
 }
 
@@ -23,7 +23,7 @@ impl CoinBaseTransaction for Transaction {
 }
 
 impl Transaction {
-    pub fn new(sender: String, recipient: String, amount: usize) -> Self {
+    pub fn new(sender: String, recipient: String, amount: u32) -> Self {
         Transaction {
             sender,
             recipient,
@@ -42,6 +42,10 @@ impl Transaction {
 
     pub fn get_signature(&self) -> &[u8] {
         &self.signature
+    }
+
+    pub fn get_amount(&self) -> u32 {
+        self.amount
     }
 
     pub fn hash(&self) -> Vec<u8> {
