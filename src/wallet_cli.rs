@@ -5,7 +5,6 @@ use crate::tx_validator;
 use crate::wallet;
 pub use std::fs::{self, File};
 pub use std::io::prelude::*;
-use std::io::stdin;
 
 const ADDRESS_PATH: &str = "data/address.txt";
 const PRIVATE_KEY_PATH: &str = "data/private_key.txt";
@@ -43,34 +42,6 @@ pub fn send(recipient_address: &str, amount: u32) -> Result<(), RitCoinErrror<'s
     Ok(())
 }
 
-fn read_cli(command: &str) -> Result<(), RitCoinErrror<'static>> {
-    match command {
-        "new" => new(),
-        command if command.starts_with("import") => {
-            let path = command.split_ascii_whitespace().collect::<Vec<&str>>()[1];
-            import(path)
-        }
-        command if command.starts_with("send") => {
-            let command = command.replace(',', "");
-            let send_parameters = command.split_ascii_whitespace().collect::<Vec<&str>>();
-            let recipient_address = send_parameters[1];
-            let amount = send_parameters[2].parse::<u32>()?;
-            send(recipient_address, amount)
-        }
-        _ => Ok(()),
-    }
-}
-
-pub fn cli() -> Result<(), RitCoinErrror<'static>> {
-    loop {
-        let mut buf = String::new();
-        match stdin().read_line(&mut buf) {
-            Ok(_) => read_cli(buf.trim())?,
-            Err(e) => {
-                eprintln!("{:?}", e);
-                break;
-            }
-        }
-    }
+pub fn broadcast(tx: &str) -> Result<(), RitCoinErrror<'static>> {
     Ok(())
 }

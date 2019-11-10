@@ -7,7 +7,7 @@ pub struct Transaction {
     signature: Vec<u8>,
 }
 
-trait CoinBaseTransaction {
+pub trait CoinBaseTransaction {
     fn new(recipient: String) -> Self;
 }
 
