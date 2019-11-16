@@ -1,10 +1,10 @@
 use std::env;
-use actix_web::{middleware, web, App, HttpServer, Responder};
-use handlers::*;
+use actix_web::{middleware, web, App, HttpResponse, HttpServer, Responder};
+use crate::handlers::*;
 
 const ADDRESS: &str = "127.0.0.1";
 
-pub fn start() -> std::io::Result<()> {
+pub fn run() -> std::io::Result<()> {
     let port = env::var("PORT")
         .unwrap_or_else(|_| "3000".to_string())
         .parse()

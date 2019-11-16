@@ -32,13 +32,13 @@ impl BlockChain {
         self.blocks.push(block)
     }
 
-    fn resolve_conflicts(&mut self) {
-        for node in &self.nodes {
-            if node.len() > self.blocks.len() {
-                self.blocks = node.to_vec()
-            }
-        }
-    }
+    // fn resolve_conflicts(&mut self) {
+    //     for node in &self.nodes {
+    //         if node.len() > self.blocks.len() {
+    //             self.blocks = node.to_vec()
+    //         }
+    //     }
+    // }
 
     pub fn is_valid(&self) -> Result<(), RitCoinErrror<'static>> {
         self.blocks[0].validate_transactions()?;

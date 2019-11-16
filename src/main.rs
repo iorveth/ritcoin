@@ -15,8 +15,12 @@ mod server;
 mod handlers;
 use cli::*;
 use errors::*;
+use std::thread;
 
 fn main() {
+    thread::spawn(move || {
+        server::run()
+    });
     if let Err(e) = cli() {
         println!("{:?}", e)
     };
