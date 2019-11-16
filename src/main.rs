@@ -11,9 +11,10 @@ mod transaction;
 mod tx_validator;
 mod wallet;
 mod wallet_cli;
+mod server;
+mod handlers;
 use cli::*;
 use errors::*;
-use hash::*;
 
 fn main() {
     if let Err(e) = cli() {

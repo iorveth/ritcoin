@@ -1,26 +1,27 @@
-use crate::block::*;
+use crate::block::Block;
 use crate::errors::*;
 use crate::serializer;
-use crate::transaction::*;
+use crate::transaction::{CoinBaseTransaction, Transaction};
 use crate::wallet;
 use std::ops::Deref;
+use std::net::{Ipv4Addr, SocketAddrV4};
 
 const DEFAULT_DIFFICULTY: usize = 2;
 const MINER_KEY_PATH: &str = "data/miner_key.txt";
 
-pub struct Node(Vec<Block>);
+// pub struct Node(Vec<Block>);
 
-impl Deref for Node {
-    type Target = Vec<Block>;
+// impl Deref for Node {
+//     type Target = Vec<Block>;
 
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
+//     fn deref(&self) -> &Self::Target {
+//         &self.0
+//     }
+// }
 
 pub struct BlockChain {
     blocks: Vec<Block>,
-    nodes: Vec<Node>,
+    nodes: Vec<SocketAddrV4>,
 }
 
 impl BlockChain {
@@ -63,5 +64,14 @@ impl BlockChain {
             vec![0; 32],
             vec![coinbase_transaction_serialized],
         ))
+    }
+
+    pub fn add_node(&mut self, node: &str) {
+        if let Ok(node) = node.parse::<SocketAddrV4>() {
+            self.nodes.push(node);
+            println!("Node {:?} added succesfully", node);
+        } else {
+            eprintln!("Invalid URL format")
+        }
     }
 }
