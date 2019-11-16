@@ -3,8 +3,8 @@ use crate::errors::*;
 use crate::serializer;
 use crate::transaction::{CoinBaseTransaction, Transaction};
 use crate::wallet;
-use std::ops::Deref;
 use std::net::{Ipv4Addr, SocketAddrV4};
+use std::ops::Deref;
 
 const DEFAULT_DIFFICULTY: usize = 2;
 const MINER_KEY_PATH: &str = "data/miner_key.txt";

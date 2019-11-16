@@ -1,8 +1,12 @@
 use crate::errors::*;
+use crate::pending_pool;
 use crate::serializer;
+use crate::server::{ADDRESS, BROADCAST_RESOURCE};
 use crate::transaction::*;
 use crate::tx_validator;
 use crate::wallet;
+use reqwest::{Client, StatusCode};
+use std::collections::HashMap;
 pub use std::fs::{self, File};
 pub use std::io::prelude::*;
 
@@ -30,7 +34,11 @@ pub fn import(path: &str) -> Result<(), RitCoinErrror<'static>> {
     write_pub_address_to_file(&pub_address)
 }
 
-pub fn send(recipient_address: &str, amount: u32) -> Result<(), RitCoinErrror<'static>> {
+pub fn send(
+    recipient_address: &str,
+    amount: u32,
+    pending_transactions: &mut Vec<Vec<u8>>,
+) -> Result<(), RitCoinErrror<'static>> {
     let sender_adress = fs::read_to_string(ADDRESS_PATH)?;
     let private_key_wif = fs::read_to_string(PRIVATE_KEY_PATH)?;
     let private_key = wallet::wif_to_private_key(private_key_wif)?;
@@ -39,9 +47,31 @@ pub fn send(recipient_address: &str, amount: u32) -> Result<(), RitCoinErrror<'s
     transaction.append_signature(signature);
     tx_validator::validate(&transaction, &public_key)?;
     let serialized = serializer::serialize(&transaction, &public_key)?;
+    pending_transactions.push(serialized);
     Ok(())
 }
 
-pub fn broadcast(tx: &str) -> Result<(), RitCoinErrror<'static>> {
-    Ok(())
+pub fn broadcast(
+    serialized_tx: &str,
+    pending_transactions: &mut Vec<Vec<u8>>,
+) -> Result<(), RitCoinErrror<'static>> {
+    let tx = pending_transactions
+        .iter()
+        .position(|tx| *tx == pending_pool::tx_str_to_vec(serialized_tx))
+        .map(|i| pending_transactions.remove(i));
+    if let Some(tx) = &tx {
+        let client = Client::new();
+        let url = ADDRESS.to_owned() + BROADCAST_RESOURCE;
+        let mut map = HashMap::new();
+        map.insert("tx", tx);
+        let mut res = client.post(&url).json(&map).send()?;
+        if res.status() == StatusCode::OK {
+            println!("{}", res.text()?);
+            Ok(())
+        } else {
+            Err(RitCoinErrror::from(res.text()?))
+        }
+    } else {
+        Err(RitCoinErrror::from("Transaction not found"))
+    }
 }

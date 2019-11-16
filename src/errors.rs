@@ -7,6 +7,8 @@ pub enum RitCoinErrror<'a> {
     ParseIntError(std::num::ParseIntError),
     BincodeError(bincode::Error),
     StrError(&'a str),
+    StringError(String),
+    ReqwestError(reqwest::Error),
 }
 
 impl<'a> From<bs58::decode::Error> for RitCoinErrror<'a> {
@@ -48,5 +50,17 @@ impl<'a> From<bincode::Error> for RitCoinErrror<'a> {
 impl<'a> From<&'a str> for RitCoinErrror<'a> {
     fn from(e: &'a str) -> Self {
         RitCoinErrror::StrError(e)
+    }
+}
+
+impl<'a> From<String> for RitCoinErrror<'a> {
+    fn from(e: String) -> Self {
+        RitCoinErrror::StringError(e)
+    }
+}
+
+impl<'a> From<reqwest::Error> for RitCoinErrror<'a> {
+    fn from(e: reqwest::Error) -> Self {
+        RitCoinErrror::ReqwestError(e)
     }
 }

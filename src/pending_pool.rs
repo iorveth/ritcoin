@@ -21,17 +21,20 @@ pub fn accept_serialized_transaction(
     save_to_mempool(serialized_transaction)
 }
 
+pub fn tx_str_to_vec(tx: &str) -> Vec<u8> {
+    tx.replace('[', "")
+        .replace(']', "")
+        .split(" ,")
+        .filter_map(|elem| elem.parse::<u8>().ok())
+        .collect()
+}
+
 pub fn get_last_transactions() -> Result<Vec<Vec<u8>>, RitCoinErrror<'static>> {
     let input = File::open(PENDING_POOL_PATH)?;
     let buffered = BufReader::new(input);
     let mut transactions = vec![];
     for tx_str in buffered.lines().take(LAST_TRANSACTIONS_COUNT) {
-        let tx = tx_str?
-            .replace('[', "")
-            .replace(']', "")
-            .split(" ,")
-            .filter_map(|elem| elem.parse::<u8>().ok())
-            .collect::<Vec<u8>>();
+        let tx = tx_str_to_vec(&tx_str?);
         transactions.push(tx)
     }
     Ok(transactions)
