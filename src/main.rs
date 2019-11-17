@@ -13,13 +13,29 @@ mod transaction;
 mod tx_validator;
 mod wallet;
 mod wallet_cli;
+use blockchain::BlockChain;
 use cli::*;
 use errors::*;
+use std::sync::{Arc, Mutex};
 use std::thread;
 
+pub struct RitCoinState {
+    blockchain: Mutex<BlockChain>,
+}
+
+impl RitCoinState {
+    fn new() -> Self {
+        Self {
+            blockchain: Mutex::new(BlockChain::new()),
+        }
+    }
+}
+
 fn main() {
-    thread::spawn(move || server::run());
-    if let Err(e) = cli() {
+    let ritcoin_state = Arc::new(RitCoinState::new());
+    let ritcoin_state_cloned = ritcoin_state.clone();
+    thread::spawn(move || server::run(ritcoin_state));
+    if let Err(e) = cli(ritcoin_state_cloned) {
         println!("{:?}", e)
     };
 }

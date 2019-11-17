@@ -1,7 +1,7 @@
 use crate::block::Block;
 use crate::errors::*;
 use crate::serializer;
-use crate::transaction::{CoinBaseTransaction, Transaction};
+use crate::transaction::*;
 use crate::wallet;
 use std::net::{Ipv4Addr, SocketAddrV4};
 use std::ops::Deref;
@@ -9,22 +9,19 @@ use std::ops::Deref;
 const DEFAULT_DIFFICULTY: usize = 2;
 const MINER_KEY_PATH: &str = "data/miner_key.txt";
 
-// pub struct Node(Vec<Block>);
-
-// impl Deref for Node {
-//     type Target = Vec<Block>;
-
-//     fn deref(&self) -> &Self::Target {
-//         &self.0
-//     }
-// }
-
 pub struct BlockChain {
     blocks: Vec<Block>,
     nodes: Vec<SocketAddrV4>,
 }
 
 impl BlockChain {
+    pub fn new() -> Self {
+        Self {
+            blocks: vec![],
+            nodes: vec![],
+        }
+    }
+
     pub fn mine(&mut self, mut block: Block) {
         while !block.hash().starts_with(&[0; DEFAULT_DIFFICULTY]) {
             block.increment_nonce()
@@ -73,5 +70,21 @@ impl BlockChain {
         } else {
             eprintln!("Invalid URL format")
         }
+    }
+
+    pub fn get_balance(&self, address: &str) -> Result<u32, RitCoinErrror<'static>> {
+        let mut balance = 0;
+        for block in &self.blocks {
+            for tx in block.get_transactions() {
+                let (transaction, _) = serializer::deserialize(tx)?;
+                if transaction.get_recipient() == address {
+                    balance += transaction.get_amount()
+                }
+                if transaction.get_sender() == address {
+                    balance -= transaction.get_amount()
+                }
+            }
+        }
+        Ok(balance)
     }
 }

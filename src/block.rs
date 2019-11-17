@@ -49,6 +49,10 @@ impl Block {
         &self.previous_hash
     }
 
+    pub fn get_transactions(&self) -> &[Vec<u8>] {
+        &self.transactions
+    }
+
     pub fn increment_nonce(&mut self) {
         self.nonce += 1;
         self.update_timestamp()

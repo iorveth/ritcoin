@@ -1,3 +1,4 @@
+use crate::blockchain;
 use crate::errors::*;
 use crate::pending_pool;
 use crate::serializer;
@@ -5,6 +6,7 @@ use crate::server::{ADDRESS, BROADCAST_RESOURCE};
 use crate::transaction::*;
 use crate::tx_validator;
 use crate::wallet;
+use crate::*;
 use reqwest::{Client, StatusCode};
 use std::collections::HashMap;
 pub use std::fs::{self, File};
@@ -37,7 +39,7 @@ pub fn import(path: &str) -> Result<(), RitCoinErrror<'static>> {
 pub fn send(
     recipient_address: &str,
     amount: u32,
-    pending_transactions: &mut Vec<Vec<u8>>,
+    prepared_transactions: &mut Vec<Vec<u8>>,
 ) -> Result<(), RitCoinErrror<'static>> {
     let sender_adress = fs::read_to_string(ADDRESS_PATH)?;
     let private_key_wif = fs::read_to_string(PRIVATE_KEY_PATH)?;
@@ -47,18 +49,18 @@ pub fn send(
     transaction.append_signature(signature);
     tx_validator::validate(&transaction, &public_key)?;
     let serialized = serializer::serialize(&transaction, &public_key)?;
-    pending_transactions.push(serialized);
+    prepared_transactions.push(serialized);
     Ok(())
 }
 
 pub fn broadcast(
     serialized_tx: &str,
-    pending_transactions: &mut Vec<Vec<u8>>,
+    prepared_transactions: &mut Vec<Vec<u8>>,
 ) -> Result<(), RitCoinErrror<'static>> {
-    let tx = pending_transactions
+    let tx = prepared_transactions
         .iter()
         .position(|tx| *tx == pending_pool::tx_str_to_vec(serialized_tx))
-        .map(|i| pending_transactions.remove(i));
+        .map(|i| prepared_transactions.remove(i));
     if let Some(tx) = &tx {
         let client = Client::new();
         let url = ADDRESS.to_owned() + BROADCAST_RESOURCE;
@@ -73,5 +75,20 @@ pub fn broadcast(
         }
     } else {
         Err(RitCoinErrror::from("Transaction not found"))
+    }
+}
+
+pub fn balance(
+    address: &str,
+    ritcoin_state: Arc<RitCoinState>,
+) -> Result<u32, RitCoinErrror<'static>> {
+    if let Ok(blockchain_state) = ritcoin_state.blockchain.lock() {
+        let balance = blockchain_state.get_balance(address)?;
+        println!("{:?}", balance);
+        Ok(balance)
+    } else {
+        Err(RitCoinErrror::from(
+            "Error, when retrieving address balance occured",
+        ))
     }
 }
