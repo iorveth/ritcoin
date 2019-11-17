@@ -1,16 +1,31 @@
 use crate::errors::*;
 use crate::transaction::Transaction;
 use crate::{serializer, tx_validator};
-pub use std::fs::{self, File};
+pub use std::fs::{self, File, OpenOptions};
 pub use std::io::prelude::*;
 use std::io::{BufRead, BufReader};
 
 const PENDING_POOL_PATH: &str = "data/pending_pool.txt";
-//const LAST_TRANSACTIONS_COUNT: usize = 3;
 
 fn save_to_mempool(serialized_transaction: &[u8]) -> Result<(), RitCoinErrror<'static>> {
-    let mut file = File::create(PENDING_POOL_PATH)?;
+    let mut file = OpenOptions::new()
+        .append(true)
+        .create(true)
+        .open(PENDING_POOL_PATH)?;
     writeln!(file, "{:?}", serialized_transaction)?;
+    Ok(())
+}
+
+pub fn delete_last_n_transactions(n: usize) -> Result<(), RitCoinErrror<'static>> {
+    let data = fs::read_to_string(PENDING_POOL_PATH)?;
+    File::create(PENDING_POOL_PATH)?;
+    let mut file = OpenOptions::new()
+        .append(true)
+        .read(true)
+        .open(PENDING_POOL_PATH)?;
+    for tx in data.lines() {
+        writeln!(file, "{:?}", tx)?;
+    }
     Ok(())
 }
 

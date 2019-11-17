@@ -49,6 +49,7 @@ pub fn send(
     transaction.append_signature(signature);
     tx_validator::validate(&transaction, &public_key)?;
     let serialized = serializer::serialize(&transaction, &public_key)?;
+    println!("{:?}", serialized);
     prepared_transactions.push(serialized);
     Ok(())
 }
