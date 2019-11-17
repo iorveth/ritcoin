@@ -30,7 +30,7 @@ fn read_cli(
         }
         command if command.starts_with("balance") => {
             let address = command.split_ascii_whitespace().collect::<Vec<&str>>()[1];
-            wallet_cli::balance(address, ritcoin_state);
+            wallet_cli::balance(address, ritcoin_state)?;
             Ok(())
         }
         _ => Ok(()),

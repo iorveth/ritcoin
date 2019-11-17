@@ -1,5 +1,7 @@
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Transaction {
     sender: String,
     recipient: String,
