@@ -1,10 +1,11 @@
 use crate::errors::*;
 use crate::merkle::*;
 use crate::{serializer, tx_validator};
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::time::SystemTime;
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Block {
     timestamp: u64,
     nonce: usize,

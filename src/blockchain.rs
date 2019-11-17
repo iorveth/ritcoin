@@ -3,12 +3,14 @@ use crate::errors::*;
 use crate::serializer;
 use crate::transaction::*;
 use crate::wallet;
+use serde::{Deserialize, Serialize};
 use std::net::{Ipv4Addr, SocketAddrV4};
 use std::ops::Deref;
 
 const DEFAULT_DIFFICULTY: usize = 2;
 const MINER_KEY_PATH: &str = "data/miner_key.txt";
 
+#[derive(Serialize, Deserialize, Clone)]
 pub struct BlockChain {
     blocks: Vec<Block>,
     nodes: Vec<SocketAddrV4>,
@@ -70,6 +72,14 @@ impl BlockChain {
         } else {
             eprintln!("Invalid URL format")
         }
+    }
+
+    pub fn get_nodes(&self) -> &[SocketAddrV4] {
+        &self.nodes
+    }
+
+    pub fn get_len(&self) -> usize {
+        self.blocks.len()
     }
 
     pub fn get_balance(&self, address: &str) -> Result<u32, RitCoinErrror<'static>> {

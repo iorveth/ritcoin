@@ -5,7 +5,9 @@ use std::env;
 pub const ADDRESS: &str = "127.0.0.1";
 pub const BROADCAST_RESOURCE: &str = "/transaction/new";
 pub const PENDINGS_RESOURCE: &str = "/transaction/pendings";
-
+pub const CHAIN_RESOURCE: &str = "/chain";
+pub const NODES_RESOURCE: &str = "/nodes";
+pub const CHAIN_LENGTH_RESOURCE: &str = "/chain/length";
 
 pub fn run(ritcoin_state: Arc<RitCoinState>) -> std::io::Result<()> {
     let port = env::var("PORT")
@@ -18,6 +20,11 @@ pub fn run(ritcoin_state: Arc<RitCoinState>) -> std::io::Result<()> {
             .wrap(middleware::Logger::default())
             .service(web::resource(BROADCAST_RESOURCE).route(web::post().to(handle_submit_tx)))
             .service(web::resource(PENDINGS_RESOURCE).route(web::post().to(handle_pendings)))
+            .service(web::resource(CHAIN_RESOURCE).route(web::post().to(handle_chain)))
+            .service(web::resource(NODES_RESOURCE).route(web::post().to(handle_nodes)))
+            .service(
+                web::resource(CHAIN_LENGTH_RESOURCE).route(web::post().to(handle_chain_length)),
+            )
     })
     .bind((ADDRESS, port))?
     .run()
