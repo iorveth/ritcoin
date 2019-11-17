@@ -1,4 +1,5 @@
 use crate::blockchain;
+use crate::cli::{ADDRESS_PATH, PRIVATE_KEY_PATH};
 use crate::errors::*;
 use crate::pending_pool;
 use crate::serializer;
@@ -12,28 +13,31 @@ use std::collections::HashMap;
 pub use std::fs::{self, File};
 pub use std::io::prelude::*;
 
-const ADDRESS_PATH: &str = "data/address.txt";
-const PRIVATE_KEY_PATH: &str = "data/private_key.txt";
-
-pub fn write_pub_address_to_file(pub_address: &str) -> Result<(), RitCoinErrror<'static>> {
-    let mut file = File::create(ADDRESS_PATH)?;
+pub fn write_pub_address_to_file(
+    pub_address: &str,
+    path_to_pub_address: &str,
+) -> Result<(), RitCoinErrror<'static>> {
+    let mut file = File::create(path_to_pub_address)?;
     write!(file, "{}", pub_address)?;
     Ok(())
 }
 
-pub fn new() -> Result<(), RitCoinErrror<'static>> {
+pub fn new(path_to_pub_address: &str) -> Result<(), RitCoinErrror<'static>> {
     let (private_key, public_key) = wallet::generate_ecdsa_key_pair();
     let pub_address = wallet::get_address(&public_key.serialize_uncompressed())?;
     println!("{:?}", private_key);
-    write_pub_address_to_file(&pub_address)
+    write_pub_address_to_file(&pub_address, path_to_pub_address)
 }
 
-pub fn import(path: &str) -> Result<(), RitCoinErrror<'static>> {
-    let private_key = wallet::wif_to_private_key_from_file(path)?;
+pub fn import(
+    path_to_private_key: &str,
+    path_to_pub_address: &str,
+) -> Result<(), RitCoinErrror<'static>> {
+    let private_key = wallet::wif_to_private_key_from_file(path_to_private_key)?;
     let public_key = wallet::private_key_to_public_key(&private_key)?;
     let pub_address = wallet::get_address(&public_key)?;
     println!("{:?}", private_key);
-    write_pub_address_to_file(&pub_address)
+    write_pub_address_to_file(&pub_address, path_to_pub_address)
 }
 
 pub fn send(
