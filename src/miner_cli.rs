@@ -31,3 +31,11 @@ pub fn mine(ritcoin_state: Arc<RitCoinState>) -> Result<(), RitCoinErrror<'stati
         Err(RitCoinErrror::from("Error, when adding node occured"))
     }
 }
+
+pub fn consensus(ritcoin_state: Arc<RitCoinState>) -> Result<(), RitCoinErrror<'static>> {
+    if let Ok(mut blockchain_state) = ritcoin_state.blockchain.lock() {
+        blockchain_state.resolve_conflicts()
+    } else {
+        Err(RitCoinErrror::from("Error, when resolving conflicts occured"))
+    }
+}

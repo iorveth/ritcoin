@@ -6,6 +6,8 @@ use crate::transaction::*;
 use crate::wallet;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddrV4;
+use crate::server::{CHAIN_RESOURCE, DEFAULT_ADDRESS};
+use reqwest::{Client, StatusCode};
 
 const DEFAULT_DIFFICULTY: usize = 2;
 const MINER_KEY_PATH: &str = "data/miner_key.txt";
@@ -19,9 +21,24 @@ pub struct BlockChain {
 
 impl BlockChain {
     pub fn new() -> Self {
-        Self {
-            blocks: vec![],
-            nodes: vec![],
+        if let Ok(existing_blockchain) = Self::exist(DEFAULT_ADDRESS) {
+            existing_blockchain
+        } else {
+            Self {
+                blocks: vec![],
+                nodes: vec![],
+            }
+        }
+    }
+
+    pub fn exist(address: &str) -> Result<Self, RitCoinErrror<'static>> {
+        let client = Client::new();
+        let chain_url = address.to_owned() + CHAIN_RESOURCE;
+        let mut res = client.post(&chain_url).send()?;
+        if res.status() == StatusCode::OK {
+            Ok(res.json()?)
+        } else {
+            Err(RitCoinErrror::from(res.text()?))
         }
     }
 
@@ -53,15 +70,18 @@ impl BlockChain {
         self.blocks.push(block)
     }
 
-    // fn resolve_conflicts(&mut self) {
-    //     for node in &self.nodes {
-    //         if node.len() > self.blocks.len() {
-    //             self.blocks = node.to_vec()
-    //         }
-    //     }
-    // }
+    pub fn resolve_conflicts(&mut self) -> Result<(), RitCoinErrror<'static>> {
+        for node_address in &self.nodes {
+            if let Ok(node) = Self::exist(&node_address.to_string()) {
+                if node.len() > self.len() && node.verify_chain().is_ok() {
+                    self.blocks = node.blocks
+                }
+            }
+        }
+        Ok(())
+    }
 
-    pub fn is_valid(&self) -> Result<(), RitCoinErrror<'static>> {
+    pub fn verify_chain(&self) -> Result<(), RitCoinErrror<'static>> {
         self.blocks[0].validate_transactions()?;
         for i in 0..self.blocks.len() - 1 {
             self.blocks[i + 1].validate_transactions()?;
@@ -107,7 +127,7 @@ impl BlockChain {
         &self.nodes
     }
 
-    pub fn get_len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.blocks.len()
     }
 

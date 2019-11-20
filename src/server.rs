@@ -2,7 +2,10 @@ use crate::handlers::*;
 use crate::*;
 use actix_web::{middleware, web, App, HttpResponse, HttpServer, Responder};
 use std::env;
-pub const ADDRESS: &str = "127.0.0.1";
+
+pub const DEFAULT_ADDRESS: &str = "0.0.0.0:3000";
+pub const DEFAULT_PORT: &str = "3000";
+pub const DEFAULT_IP: &str = "0.0.0.0";
 pub const BROADCAST_RESOURCE: &str = "/transaction/new";
 pub const PENDINGS_RESOURCE: &str = "/transaction/pendings";
 pub const CHAIN_RESOURCE: &str = "/chain";
@@ -11,7 +14,7 @@ pub const CHAIN_LENGTH_RESOURCE: &str = "/chain/length";
 
 pub fn run(ritcoin_state: Arc<RitCoinState>) -> std::io::Result<()> {
     let port = env::var("PORT")
-        .unwrap_or_else(|_| "3000".to_string())
+        .unwrap_or_else(|_| DEFAULT_PORT.to_string())
         .parse()
         .expect("PORT must be a number");
     HttpServer::new(move || {
@@ -26,6 +29,6 @@ pub fn run(ritcoin_state: Arc<RitCoinState>) -> std::io::Result<()> {
                 web::resource(CHAIN_LENGTH_RESOURCE).route(web::post().to(handle_chain_length)),
             )
     })
-    .bind((ADDRESS, port))?
+    .bind((DEFAULT_IP, port))?
     .run()
 }

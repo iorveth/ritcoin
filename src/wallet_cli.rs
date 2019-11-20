@@ -3,7 +3,7 @@ use crate::cli::{ADDRESS_PATH, PRIVATE_KEY_PATH};
 use crate::errors::*;
 use crate::pending_pool;
 use crate::serializer;
-use crate::server::{ADDRESS, BROADCAST_RESOURCE};
+use crate::server::{DEFAULT_ADDRESS, BROADCAST_RESOURCE};
 use crate::transaction::*;
 use crate::tx_validator;
 use crate::wallet;
@@ -68,7 +68,7 @@ pub fn broadcast(
         .map(|i| prepared_transactions.remove(i));
     if let Some(tx) = &tx {
         let client = Client::new();
-        let url = ADDRESS.to_owned() + BROADCAST_RESOURCE;
+        let url = DEFAULT_ADDRESS.to_owned() + BROADCAST_RESOURCE;
         let mut map = HashMap::new();
         map.insert("tx", tx);
         let mut res = client.post(&url).json(&map).send()?;

@@ -46,6 +46,7 @@ fn read_cli(
             miner_cli::add_node(node, ritcoin_state)
         }
         "mine" => miner_cli::mine(ritcoin_state),
+        "consensus" => miner_cli::consensus(ritcoin_state),
         _ => Ok(()),
     }
 }
