@@ -88,3 +88,8 @@ pub fn get_address(public_key: &[u8]) -> Result<String, RitCoinErrror<'static>> 
     encrypted_pub_key.extend_from_slice(&checksum);
     Ok(bs58::encode(encrypted_pub_key).into_string())
 }
+
+pub fn address_to_pkhash(address: &str) -> Result<String, RitCoinErrror<'static>> {
+    let mut decoded_addr = bs58::decode(address).into_vec()?;
+    Ok(hex::encode(&decoded_addr[1..decoded_addr.len() - 4]))
+}

@@ -1,11 +1,11 @@
-use crate::blockchain;
 use crate::cli::{ADDRESS_PATH, PRIVATE_KEY_PATH};
 use crate::errors::*;
 use crate::pending_pool;
 use crate::serializer;
-use crate::server::{DEFAULT_ADDRESS, BROADCAST_RESOURCE};
+use crate::server::{BROADCAST_RESOURCE, DEFAULT_ADDRESS};
 use crate::transaction::*;
 use crate::tx_validator;
+use crate::utxo_set::*;
 use crate::wallet;
 use crate::*;
 use reqwest::{Client, StatusCode};
@@ -40,22 +40,75 @@ pub fn import(
     write_pub_address_to_file(&pub_address, path_to_pub_address)
 }
 
+pub fn get_used_utxos(utxos: &mut Vec<Utxo>, amount: u64) -> Vec<&Utxo> {
+    let exact_utxo = utxos
+        .iter()
+        .filter(|utxo| utxo.get_output().amount() == amount)
+        .take(1)
+        .collect::<Vec<_>>();
+    if exact_utxo.is_empty() {
+        let exact_utxos = utxos
+            .iter()
+            .filter(|utxo| utxo.get_output().amount() < amount)
+            .collect::<Vec<_>>();
+        if exact_utxos
+            .iter()
+            .map(|utxo| utxo.get_output().amount())
+            .sum()
+            == amount
+        {
+            return exact_utxos;
+        } else {
+            //TODO Implement more efficient algorithm for utxo select here
+            utxos.sort_by(|a, b| a.get_output().amount().cmp(&b.get_output().amount()));
+            for utxo in utxos {
+                if utxo.get_output().amount() > amount {
+                    return vec![utxo];
+                }
+            }
+            let mut total_amount = 0;
+            let mut i = 0;
+            for utxo in utxos {
+                if total_amount > amount {
+                    return utxos.iter().take(i).collect();
+                } else {
+                    total_amount += utxo.get_output().amount();
+                    i += 1;
+                }
+            }
+            utxos.iter().take(i).collect()
+        }
+    } else {
+        exact_utxo
+    }
+}
+
 pub fn send(
     recipient_address: &str,
-    amount: u32,
+    amount: u64,
     prepared_transactions: &mut Vec<Vec<u8>>,
+    ritcoin_state: Arc<RitCoinState>,
 ) -> Result<(), RitCoinErrror<'static>> {
     let sender_adress = fs::read_to_string(ADDRESS_PATH)?;
     let private_key_wif = fs::read_to_string(PRIVATE_KEY_PATH)?;
     let private_key = wallet::wif_to_private_key(private_key_wif)?;
-    let mut transaction = Transaction::new(sender_adress, recipient_address.to_owned(), amount);
-    let (signature, public_key) = wallet::sign(&transaction.hash(), &private_key)?;
-    transaction.append_signature(signature);
-    tx_validator::validate(&transaction, &public_key)?;
-    let serialized = serializer::serialize(&transaction, &public_key)?;
-    println!("{:?}", serialized);
-    prepared_transactions.push(serialized);
-    Ok(())
+    let pkhash = wallet::address_to_pkhash(&sender_adress)?;
+    if let Ok(blockchain_state) = ritcoin_state.blockchain.lock() {
+        let utxos = blockchain_state.get_utxos_ref().by_pkhash(&pkhash);
+        let used_utxos = get_used_utxos(&mut utxos, amount);
+        let mut transaction = Transaction::new(sender_adress, recipient_address.to_owned(), amount);
+        let (signature, public_key) = wallet::sign(&transaction.hash(), &private_key)?;
+        transaction.append_signature(signature);
+        tx_validator::validate(&transaction, &public_key)?;
+        let serialized = serializer::serialize(&transaction, &public_key)?;
+        println!("{:?}", serialized);
+        prepared_transactions.push(serialized);
+        Ok(())
+    } else {
+        Err(RitCoinErrror::from(
+            "Error, when accessing blockchain state occured",
+        ))
+    }
 }
 
 pub fn broadcast(
@@ -93,7 +146,7 @@ pub fn balance(
         Ok(balance)
     } else {
         Err(RitCoinErrror::from(
-            "Error, when retrieving address balance occured",
+            "Error, when accessing blockchain state occured",
         ))
     }
 }

@@ -7,11 +7,12 @@ use std::time::SystemTime;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Block {
+    version: i32,
+    previous_block_header_hash: Vec<u8>,
+    merkle_root: Vec<u8>,
     timestamp: u64,
     nonce: usize,
-    previous_hash: Vec<u8>,
     transactions: Vec<Vec<u8>>,
-    merkle_root: Vec<u8>,
 }
 
 impl Block {

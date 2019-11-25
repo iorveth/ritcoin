@@ -11,11 +11,11 @@ mod serializer;
 mod server;
 mod transaction;
 mod tx_validator;
+mod utxo_set;
 mod wallet;
 mod wallet_cli;
 use blockchain::BlockChain;
 use cli::*;
-use errors::*;
 use std::sync::{Arc, Mutex};
 use std::thread;
 

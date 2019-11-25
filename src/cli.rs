@@ -29,7 +29,7 @@ fn read_cli(
             let command = command.replace(',', "");
             let send_parameters = command.split_ascii_whitespace().collect::<Vec<&str>>();
             let recipient_address = send_parameters[1];
-            let amount = send_parameters[2].parse::<u32>()?;
+            let amount = send_parameters[2].parse::<u64>()?;
             wallet_cli::send(recipient_address, amount, prepared_transactions)
         }
         command if command.starts_with("broadcast") => {

@@ -1,12 +1,53 @@
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
+const VERSION: u8 = 1;
+#[derive(Debug, Serialize, Deserialize)]
+pub struct OutPoint {
+    hash: Vec<u8>,
+    index: u32,
+}
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Input {
+    previous_output: OutPoint,
+    script_bytes: u16,
+    sig_script: String,
+    sequence: u32,
+}
+
+pub struct CoinBaseInput {
+    hash: Vec<u8>,
+    index: u32,
+    script_bytes: u16,
+    height: String,
+    sig_script: Option<String>,
+    sequence: u32,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Output {
+    amount: u64,
+    script_length: u16,
+    script_pubkey: String,
+}
+
+impl Output {
+    pub fn get_script_pubkey(&self) -> &str {
+        &self.script_pubkey
+    }
+
+    pub fn amount(&self) -> u64 {
+        self.amount
+    }
+}
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Transaction {
-    sender: String,
-    recipient: String,
-    amount: u32,
-    signature: Vec<u8>,
+    version: i32,
+    tx_in_count: u16,
+    tx_in: Vec<Input>,
+    tx_out_count: u16,
+    tx_out: Vec<Output>,
+    lock_time: u32,
 }
 
 pub trait CoinBaseTransaction {
@@ -25,12 +66,13 @@ impl CoinBaseTransaction for Transaction {
 }
 
 impl Transaction {
-    pub fn new(sender: String, recipient: String, amount: u32) -> Self {
+    pub fn new(inputs: Vec<Input>, outputs: Vec<Output>, amount: u32) -> Self {
         Self {
-            sender,
-            recipient,
-            amount,
-            signature: Vec::default(),
+            version: VERSION,
+            input_counter: iputs.len(),
+            inputs,
+            output_counter: outputs.len(),
+            outputs,
         }
     }
 

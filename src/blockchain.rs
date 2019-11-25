@@ -2,12 +2,13 @@ use crate::block::Block;
 use crate::errors::*;
 use crate::pending_pool;
 use crate::serializer;
+use crate::server::{CHAIN_RESOURCE, DEFAULT_ADDRESS};
 use crate::transaction::*;
+use crate::utxo_set::*;
 use crate::wallet;
+use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddrV4;
-use crate::server::{CHAIN_RESOURCE, DEFAULT_ADDRESS};
-use reqwest::{Client, StatusCode};
 
 const DEFAULT_DIFFICULTY: usize = 2;
 const MINER_KEY_PATH: &str = "data/miner_key.txt";
@@ -17,6 +18,7 @@ const BLOCK_TRANSACTIONS_COUNT: usize = 3;
 pub struct BlockChain {
     blocks: Vec<Block>,
     nodes: Vec<SocketAddrV4>,
+    utxo: UtxoSet,
 }
 
 impl BlockChain {
@@ -27,8 +29,13 @@ impl BlockChain {
             Self {
                 blocks: vec![],
                 nodes: vec![],
+                utxo: UtxoSet::new(),
             }
         }
+    }
+
+    pub fn get_utxos_ref(&self) -> &UtxoSet {
+        &self.utxo
     }
 
     pub fn exist(address: &str) -> Result<Self, RitCoinErrror<'static>> {
@@ -53,7 +60,7 @@ impl BlockChain {
             let mut pending_transactions =
                 pending_pool::get_last_transactions(Some(BLOCK_TRANSACTIONS_COUNT))?;
             let coinbase_transaction = Self::get_coinbase_transaction(&public_key, pub_address)?;
-            pending_transactions.push(coinbase_transaction);
+            pending_transactions.insert(0, coinbase_transaction);
             let block = Block::new(
                 self.blocks[self.blocks.len() - 1].hash(),
                 pending_transactions,
