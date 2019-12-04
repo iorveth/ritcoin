@@ -1,4 +1,4 @@
-use crate::transaction::{Output, Input, Transaction};
+use crate::transaction::{Input, Output, Transaction};
 use serde::{Deserialize, Serialize};
 
 const UTXO_SET_PATH: &str = "data/utxo_set.txt";
@@ -61,30 +61,31 @@ impl UtxoSet {
         }
         None
     }
-    
+
     pub fn remove(&mut self, input: &Input) {
-        self.utxos.iter()
-        .position(|utxo| (utxo.get_tx_id(), utxo.get_index()) == input.get_previous_output().get())
-        .map(|i| self.utxos.remove(i));
+        self.utxos
+            .iter()
+            .position(|utxo| {
+                (utxo.get_tx_id(), utxo.get_index()) == input.get_previous_output().get()
+            })
+            .map(|i| self.utxos.remove(i));
     }
 
     pub fn remove_used(&mut self, tx_in: &[Input]) {
         tx_in.iter().for_each(|input| self.remove(input))
     }
 
-    pub fn add(&mut self, tx_id: Vec<u8>, index: u32, output: Output) {
-        let utxo = Utxo::new(tx_id, index, output);
-        self.utxos.push(utxo);
-    }
-
-    pub fn add_unspent(&mut self, tx_out: &[Output]) {
-
+    pub fn add_unspent(&mut self, tx_out: &[Output], tx_id: Vec<u8>) {
+        tx_out.iter().enumerate().for_each(|(index, output)| {
+            let utxo = Utxo::new(tx_id.clone(), index as u32, output.clone());
+            self.utxos.push(utxo);
+        })
     }
 
     pub fn recalculate_utxos(&mut self, transactions: &[Transaction]) {
         for transaction in transactions {
             self.remove_used(transaction.get_tx_in());
-            self.add_unspent(transaction.get_tx_out());
+            self.add_unspent(transaction.get_tx_out(), transaction.hash());
         }
     }
 

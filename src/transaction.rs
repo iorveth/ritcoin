@@ -189,7 +189,21 @@ impl Transaction {
         }
     }
 
-    pub fn hash(&self, input: &Input) -> Vec<u8> {
+    pub fn hash(&self) -> Vec<u8> {
+        let mut hasher = Sha256::new();
+        hasher.input(&self.version.to_string());
+        hasher.input(&self.tx_in_count.to_string());
+        for tx_in in &self.tx_in {
+            tx_in.hash(&mut hasher, true)
+        }
+        for tx_out in &self.tx_out {
+            tx_out.hash(&mut hasher)
+        }
+        let sha_256_hash = hasher.result().to_vec();
+        sha256(&sha_256_hash)
+    }
+
+    pub fn hash_one(&self, input: &Input) -> Vec<u8> {
         let mut hasher = Sha256::new();
         hasher.input(&self.version.to_string());
         hasher.input(&self.tx_in_count.to_string());
@@ -209,7 +223,10 @@ impl Transaction {
     }
 
     pub fn hash_all(&self) -> Vec<Vec<u8>> {
-        self.tx_in.iter().map(|input| self.hash(input)).collect()
+        self.tx_in
+            .iter()
+            .map(|input| self.hash_one(input))
+            .collect()
     }
 
     pub fn calculate_sig_script(signature: &[u8], pub_key: &[u8]) -> Vec<u8> {
@@ -239,7 +256,7 @@ impl Transaction {
                 &input.previous_output.tx_id,
                 input.previous_output.index,
             ) {
-                script::execute(input.get_sig_script(), script_pubkey, &self.hash(input))?;
+                script::execute(input.get_sig_script(), script_pubkey, &self.hash_one(input))?;
             } else {
                 return Err(RitCoinErrror::from(
                     "utxo script_pubkey for given input not found!",
