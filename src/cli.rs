@@ -30,11 +30,22 @@ fn read_cli(
             let send_parameters = command.split_ascii_whitespace().collect::<Vec<&str>>();
             let recipient_address = send_parameters[1];
             let amount = send_parameters[2].parse::<u64>()?;
-            wallet_cli::send(recipient_address, amount, prepared_transactions)
+            wallet_cli::send(
+                recipient_address,
+                amount,
+                prepared_transactions,
+                ritcoin_state,
+            )
         }
         command if command.starts_with("broadcast") => {
-            let serialized_tx = command.split_ascii_whitespace().collect::<Vec<&str>>()[1];
-            wallet_cli::broadcast(serialized_tx, prepared_transactions)
+            let broadcast_parameters = command.split_ascii_whitespace().collect::<Vec<&str>>();
+            let serialized_tx = broadcast_parameters[1];
+            match broadcast_parameters.get(2) {
+                Some(flag) if *flag == "-t" => {
+                    wallet_cli::broadcast(serialized_tx, prepared_transactions, true)
+                }
+                _ => wallet_cli::broadcast(serialized_tx, prepared_transactions, false),
+            }
         }
         command if command.starts_with("balance") => {
             let address = command.split_ascii_whitespace().collect::<Vec<&str>>()[1];

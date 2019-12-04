@@ -1,6 +1,8 @@
 use crate::errors::*;
+use crate::serializer;
 use crate::transaction::Transaction;
-use crate::{serializer, tx_validator};
+use crate::utxo_set::UtxoSet;
+use crate::wallet;
 pub use std::fs::{self, File, OpenOptions};
 pub use std::io::prelude::*;
 use std::io::{BufRead, BufReader};
@@ -31,9 +33,20 @@ pub fn delete_last_n_transactions(n: usize) -> Result<(), RitCoinErrror<'static>
 
 pub fn accept_serialized_transaction(
     serialized_transaction: &[u8],
+    utxo_set: &UtxoSet,
 ) -> Result<(), RitCoinErrror<'static>> {
-    let (transaction, public_key) = serializer::deserialize(serialized_transaction)?;
-    tx_validator::validate(&transaction, &public_key)?;
+    let transaction = serializer::deserialize(serialized_transaction)?;
+    let pub_keys = transaction.get_pub_keys_from_inputs();
+    let pk_hashes: Vec<_> = pub_keys
+        .iter()
+        .map(|pub_key| wallet::pk_hash_from_public_key(pub_key))
+        .collect();
+    let utxos: Vec<_> = pk_hashes
+        .iter()
+        .map(|pk_hash| utxo_set.by_pkhash(pk_hash))
+        .flatten()
+        .collect();
+    transaction.validate(&utxos)?;
     save_to_mempool(serialized_transaction)
 }
 
@@ -69,7 +82,7 @@ pub fn get_last_transactions_deserialized(
     let serialized_transactions = get_last_transactions(n)?;
     let mut deserialized_transactions = vec![];
     for tx in serialized_transactions {
-        let (deserialized_tx, _) = serializer::deserialize(&tx)?;
+        let deserialized_tx = serializer::deserialize(&tx)?;
         deserialized_transactions.push(deserialized_tx);
     }
     Ok(deserialized_transactions)
