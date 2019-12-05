@@ -9,7 +9,7 @@ use crate::wallet;
 use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddrV4;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 const DEFAULT_DIFFICULTY: usize = 3;
 const MINER_KEY_PATH: &str = "data/miner_key.txt";
@@ -81,6 +81,7 @@ impl BlockChain {
                 self.blocks[self.blocks.len() - 1].hash(),
                 pending_transactions,
             );
+            block.validate_transactions(&self.utxo)?;
             self.start_mine(block);
             pending_pool::delete_last_n_transactions(BLOCK_TRANSACTIONS_COUNT)?;
             self.utxo.recalculate_utxos(&deserialised_transactions);
@@ -111,24 +112,10 @@ impl BlockChain {
         Ok(())
     }
 
-    pub fn validate_block_tx(&self, index: usize) -> Result<(), RitCoinErrror<'static>> {
-        let pub_keys = self.blocks[index].pub_keys_from_txins()?;
-        let pk_hashes: Vec<_> = pub_keys
-            .iter()
-            .map(|pub_key| wallet::pk_hash_from_public_key(pub_key))
-            .collect();
-        let utxos: Vec<_> = pk_hashes
-            .iter()
-            .map(|pk_hash| self.utxo.by_pkhash(pk_hash))
-            .flatten()
-            .collect();
-        self.blocks[index].validate_transactions(&utxos)
-    }
-
     pub fn verify_chain(&self) -> Result<(), RitCoinErrror<'static>> {
-        self.validate_block_tx(0)?;
+        self.blocks[0].validate_transactions(&self.utxo)?;
         for i in 0..self.blocks.len() - 1 {
-            self.validate_block_tx(i + 1)?;
+            self.blocks[i+1].validate_transactions(&self.utxo)?;
             if !(self.blocks[i].hash() == self.blocks[i + 1].get_previous_hash()) {
                 return Err(RitCoinErrror::from(
                     "previous block hash in next block do not match current block hash",

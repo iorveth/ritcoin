@@ -250,20 +250,23 @@ impl Transaction {
     }
 
     pub fn validate(&self, utxos: &[&Utxo]) -> Result<(), RitCoinErrror<'static>> {
+        let mut inputs_sum = 0;
         for input in &self.tx_in {
-            if let Some(script_pubkey) = UtxoSet::get(
+            if let Some((script_pubkey, amount)) = UtxoSet::get_validation_data(
                 utxos,
                 &input.previous_output.tx_id,
                 input.previous_output.index,
             ) {
+                inputs_sum+=amount;
                 script::execute(input.get_sig_script(), script_pubkey, &self.hash_one(input))?;
-            } else {
-                return Err(RitCoinErrror::from(
-                    "utxo script_pubkey for given input not found!",
-                ));
             }
         }
-        Ok(())
+        let outputs_sum = self.tx_out.iter().fold(0_u64, |acc, output| acc + output.amount);
+        if inputs_sum == outputs_sum {
+            Ok(())
+        } else {
+            Err(RitCoinErrror::from("Sum of inputs isn`t equal to sum of outputs"))
+        }
     }
 
     pub fn get_pub_keys_from_inputs(&self) -> HashSet<Vec<u8>> {

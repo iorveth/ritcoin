@@ -1,11 +1,12 @@
 use crate::errors::*;
 use crate::merkle::*;
 use crate::serializer;
-use crate::utxo_set::Utxo;
+use crate::utxo_set::{Utxo, UtxoSet};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::HashSet;
 use std::time::SystemTime;
+use crate::wallet;
 
 const BLOCK_VERSION: i32 = 1;
 
@@ -32,10 +33,20 @@ impl Block {
         }
     }
 
-    pub fn validate_transactions(&self, utxos: &[&Utxo]) -> Result<(), RitCoinErrror<'static>> {
+    pub fn validate_transactions(&self, utxo_set: &UtxoSet) -> Result<(), RitCoinErrror<'static>> {
+        let pub_keys = self.pub_keys_from_txins()?;
+        let pk_hashes: Vec<_> = pub_keys
+            .iter()
+            .map(|pub_key| wallet::pk_hash_from_public_key(pub_key))
+            .collect();
+        let utxos: Vec<_> = pk_hashes
+            .iter()
+            .map(|pk_hash| utxo_set.by_pkhash(pk_hash))
+            .flatten()
+            .collect();
         for transaction in &self.transactions {
             let transaction = serializer::deserialize(transaction)?;
-            transaction.validate(utxos)?;
+            transaction.validate(&utxos)?;
         }
         Ok(())
     }

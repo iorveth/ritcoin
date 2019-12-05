@@ -53,10 +53,10 @@ impl UtxoSet {
             .collect()
     }
 
-    pub fn get<'a>(utxos: &'a [&Utxo], tx_id: &[u8], index: u32) -> Option<&'a [u8]> {
+    pub fn get_validation_data<'a>(utxos: &'a [&Utxo], tx_id: &[u8], index: u32) -> Option<(&'a [u8], u64)> {
         for utxo in utxos {
             if utxo.get_tx_id() == tx_id && index == index {
-                return Some(utxo.get_output().get_script_pubkey());
+                return Some((utxo.get_output().get_script_pubkey(), utxo.get_output().get_amount()));
             }
         }
         None
