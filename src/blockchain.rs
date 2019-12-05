@@ -9,8 +9,9 @@ use crate::wallet;
 use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddrV4;
+use std::time::{Duration, Instant};
 
-const DEFAULT_DIFFICULTY: usize = 2;
+const DEFAULT_DIFFICULTY: usize = 3;
 const MINER_KEY_PATH: &str = "data/miner_key.txt";
 const BLOCK_TRANSACTIONS_COUNT: usize = 3;
 const DEFAULT_COINBASE_AMOUNT: u64 = 100;
@@ -81,14 +82,20 @@ impl BlockChain {
                 pending_transactions,
             );
             self.start_mine(block);
+            pending_pool::delete_last_n_transactions(BLOCK_TRANSACTIONS_COUNT)?;
             self.utxo.recalculate_utxos(&deserialised_transactions);
-            pending_pool::delete_last_n_transactions(BLOCK_TRANSACTIONS_COUNT)
+            Ok(())
         }
     }
 
     pub fn start_mine(&mut self, mut block: Block) {
+        let mut start = Instant::now();
         while !block.hash().starts_with(&[0; DEFAULT_DIFFICULTY]) {
-            block.increment_nonce()
+            block.increment_nonce();
+            if start.elapsed().as_secs() == 2 {
+                block.update_timestamp();
+                start = Instant::now();
+            }
         }
         self.blocks.push(block)
     }

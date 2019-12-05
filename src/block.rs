@@ -42,13 +42,11 @@ impl Block {
 
     pub fn hash(&self) -> Vec<u8> {
         let mut hasher = Sha256::new();
+        hasher.input(self.version.to_string());
+        hasher.input(&self.previous_block_header_hash);
+        hasher.input(&self.merkle_root);
         hasher.input(self.timestamp.to_string());
         hasher.input(self.nonce.to_string());
-        hasher.input(&self.previous_block_header_hash);
-        self.transactions
-            .iter()
-            .for_each(|transaction| hasher.input(transaction));
-        hasher.input(&self.merkle_root);
         hasher.result().to_vec()
     }
 
@@ -62,6 +60,10 @@ impl Block {
 
     pub fn increment_nonce(&mut self) {
         self.nonce += 1;
+    }
+
+    pub fn update_timestamp(&mut self) {
+        self.timestamp = Self::calculate_timestamp();
     }
 
     pub fn pub_keys_from_txins(&self) -> Result<Vec<Vec<u8>>, RitCoinErrror<'static>> {
