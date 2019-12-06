@@ -62,7 +62,6 @@ pub fn send(
             let mut transaction = Transaction::new(inputs, outputs);
             transaction.sign(&private_key)?;
             transaction.validate(&used_utxos)?;
-            println!("Haha 4");
             let serialized = serializer::serialize(&transaction)?;
             println!("{:?}", serialized);
             prepared_transactions.push(serialized);

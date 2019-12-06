@@ -127,6 +127,7 @@ impl BlockChain {
     pub fn genesis_block(block_height: u32) -> Result<Block, RitCoinErrror<'static>> {
         let private_key = wallet::wif_to_private_key_from_file(MINER_KEY_PATH)?;
         let public_key = wallet::private_key_to_public_key(&private_key)?;
+        println!("{:?}", public_key);
         let pk_hash = wallet::pk_hash_from_public_key(&public_key);
         let coinbase_transaction =
             CoinBaseTransaction::new(&pk_hash, block_height, DEFAULT_COINBASE_AMOUNT);

@@ -14,7 +14,7 @@ const SIGHASH_ALL: u8 = 1;
 const SIGHASH_NONE: u8 = 2;
 const SIGHASH_SINGLE: u8 = 3;
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct OutPoint {
     tx_id: Vec<u8>,
     index: u32,
@@ -30,7 +30,7 @@ impl OutPoint {
     }
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Input {
     previous_output: OutPoint,
     script_bytes: u16,
@@ -41,11 +41,11 @@ pub struct Input {
 impl Input {
     pub fn create(utxo: &Utxo) -> Self {
         let previous_output = OutPoint::new(utxo.get_tx_id().to_vec(), utxo.get_index());
-        let pub_key = utxo.get_output().get_script_pubkey();
+        let script_pubkey = utxo.get_output().get_script_pubkey();
         Self {
             previous_output,
-            script_bytes: pub_key.len() as u16,
-            sig_script: pub_key.to_vec(),
+            script_bytes: script_pubkey.len() as u16,
+            sig_script: script_pubkey.to_vec(),
             sequence: std::u32::MAX,
         }
     }
@@ -63,7 +63,7 @@ impl Input {
     }
 
     pub fn get_public_key(&self) -> &[u8] {
-        &self.sig_script[self.sig_script.len() - 65..self.sig_script.len()]
+        &self.sig_script[self.sig_script.len() - 65..]
     }
 
     pub fn hash(&self, hasher: &mut Sha256, sig_script: bool) {
@@ -135,7 +135,7 @@ impl Output {
         hasher.input(&self.script_pubkey);
     }
 }
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Transaction {
     version: i32,
     tx_in_count: u16,
@@ -229,7 +229,8 @@ impl Transaction {
     }
 
     pub fn calculate_sig_script(signature: &[u8], pub_key: &[u8]) -> Vec<u8> {
-        let mut sig_script = Vec::new();
+        let mut sig_script = vec![];
+        println!("{:?}", signature.len());
         sig_script.push((signature.len() + 1) as u8);
         sig_script.extend_from_slice(signature);
         sig_script.push(1);
@@ -248,16 +249,27 @@ impl Transaction {
         Ok(())
     }
 
+    pub fn get_original_hashes(&self, utxos: &[&Utxo]) -> Vec<Vec<u8>>{
+        let mut transaction = self.clone();
+        for input in &mut transaction.tx_in {
+            let (script_pubkey, _) = UtxoSet::get_validation_data(utxos, &input.previous_output.tx_id, input.previous_output.index).unwrap();
+            input.script_bytes = script_pubkey.len() as u16;
+            input.sig_script = script_pubkey.to_vec();
+        }
+        transaction.hash_all()
+    }
+
     pub fn validate(&self, utxos: &[&Utxo]) -> Result<(), RitCoinErrror<'static>> {
         let mut inputs_sum = 0;
-        for input in &self.tx_in {
+        let hashes = self.get_original_hashes(utxos);
+        for (i, input) in self.tx_in.iter().enumerate() {
             if let Some((script_pubkey, amount)) = UtxoSet::get_validation_data(
                 utxos,
                 &input.previous_output.tx_id,
                 input.previous_output.index,
             ) {
                 inputs_sum += amount;
-                script::execute(input.get_sig_script(), script_pubkey, &self.hash_one(input))?;
+                script::execute(input.get_sig_script(), script_pubkey, &hashes[i])?;
             }
         }
         let outputs_sum = self

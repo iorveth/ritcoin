@@ -45,8 +45,8 @@ impl Stack {
     }
 
     fn op_hash160(&mut self) -> Result<(), RitCoinErrror<'static>> {
-        if let Some(last) = self.last() {
-            let hash = wallet::pk_hash_from_public_key(last);
+        if let Some(last) = self.pop() {
+            let hash = wallet::pk_hash_from_public_key(&last);
             self.push(hash);
             Ok(())
         } else {
@@ -72,7 +72,7 @@ impl Stack {
         let signature = self.pop();
         match (public_key, signature) {
             (Some(public_key), Some(signature)) => {
-                Ok(wallet::verify(hash, &public_key, &signature)?)
+                Ok(wallet::verify(hash, &signature, &public_key)?)
             }
             _ => Err(RitCoinErrror::from("Public key or signature not found!")),
         }

@@ -67,7 +67,7 @@ pub fn sign(hash: &[u8], private_key: &[u8]) -> Result<(Vec<u8>, Vec<u8>), secp2
 pub fn verify(hash: &[u8], signature: &[u8], public_key: &[u8]) -> Result<(), secp256k1::Error> {
     let secp = Secp256k1::new();
     let hash = Message::from_slice(hash)?;
-    let signature = Signature::from_compact(signature)?;
+    let signature = Signature::from_der(signature)?;
     let public_key = PublicKey::from_slice(public_key)?;
     secp.verify(&hash, &signature, &public_key)
 }
