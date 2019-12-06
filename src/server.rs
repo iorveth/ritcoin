@@ -3,7 +3,7 @@ use crate::*;
 use actix_web::{middleware, web, App, HttpServer};
 use std::env;
 
-pub const DEFAULT_ADDRESS: &str = "0.0.0.0:3000";
+pub const DEFAULT_ADDRESS: &str = "http://0.0.0.0:3000";
 pub const DEFAULT_PORT: &str = "3000";
 pub const DEFAULT_IP: &str = "0.0.0.0";
 pub const BROADCAST_RESOURCE: &str = "/transaction/new";
