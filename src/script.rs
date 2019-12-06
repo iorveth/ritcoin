@@ -25,10 +25,13 @@ impl Stack {
         //remove sig length
         sig_script.remove(0);
         //remove sig type
-        sig_script.remove(72);
+        sig_script.remove(71);
         //remove pub_key len
-        sig_script.remove(72);
-        Self(vec![sig_script.to_owned()])
+        sig_script.remove(71);
+        Self(vec![
+            sig_script[..sig_script.len() - 65].to_owned(),
+            sig_script[sig_script.len() - 65..].to_owned(),
+        ])
     }
 
     fn op_dup(&mut self) -> Result<(), RitCoinErrror<'static>> {

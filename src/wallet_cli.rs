@@ -24,7 +24,8 @@ pub fn write_pub_address_to_file(
 pub fn new(path_to_pub_address: &str) -> Result<(), RitCoinErrror<'static>> {
     let (private_key, public_key) = wallet::generate_ecdsa_key_pair();
     let pub_address = wallet::get_address(&public_key.serialize_uncompressed())?;
-    println!("{:?}", private_key);
+    let private_key_wif = wallet::private_key_to_wif(&format!("{}", private_key))?;
+    println!("{}", private_key_wif);
     write_pub_address_to_file(&pub_address, path_to_pub_address)
 }
 
@@ -40,17 +41,16 @@ pub fn import(
 }
 
 pub fn send(
-    recipient_address: &str,
+    receiver_address: &str,
     amount: u64,
     prepared_transactions: &mut Vec<Vec<u8>>,
     ritcoin_state: Arc<RitCoinState>,
 ) -> Result<(), RitCoinErrror<'static>> {
     let sender_adress = fs::read_to_string(ADDRESS_PATH)?;
     let private_key_wif = fs::read_to_string(PRIVATE_KEY_PATH)?;
-    let private_key = wallet::wif_to_private_key(private_key_wif)?;
-    let public_key = wallet::private_key_to_public_key(&private_key)?;
+    let private_key = wallet::wif_to_private_key(&private_key_wif)?;
     let sender_pkhash = wallet::address_to_pkhash(&sender_adress)?;
-    let receiver_pkhash = wallet::address_to_pkhash(&sender_adress)?;
+    let receiver_pkhash = wallet::address_to_pkhash(&receiver_address)?;
     if let Ok(blockchain_state) = ritcoin_state.blockchain.lock() {
         let utxos = blockchain_state.get_utxos_ref().by_pkhash(&sender_pkhash);
         let used_utxos = UtxoSet::get_used_utxos(utxos, amount);
@@ -62,6 +62,7 @@ pub fn send(
             let mut transaction = Transaction::new(inputs, outputs);
             transaction.sign(&private_key)?;
             transaction.validate(&used_utxos)?;
+            println!("Haha 4");
             let serialized = serializer::serialize(&transaction)?;
             println!("{:?}", serialized);
             prepared_transactions.push(serialized);
@@ -110,7 +111,7 @@ pub fn balance(
 ) -> Result<u64, RitCoinErrror<'static>> {
     if let Ok(blockchain_state) = ritcoin_state.blockchain.lock() {
         let balance = blockchain_state.get_balance(address)?;
-        println!("{:?}", balance);
+        println!("{}", balance);
         Ok(balance)
     } else {
         Err(RitCoinErrror::from(

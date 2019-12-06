@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::net::SocketAddrV4;
 use std::time::Instant;
 
-const DEFAULT_DIFFICULTY: usize = 3;
+const DEFAULT_DIFFICULTY: usize = 2;
 const MINER_KEY_PATH: &str = "data/miner_key.txt";
 const BLOCK_TRANSACTIONS_COUNT: usize = 3;
 const DEFAULT_COINBASE_AMOUNT: u64 = 100;
@@ -58,38 +58,29 @@ impl BlockChain {
     pub fn mine(&mut self) -> Result<(), RitCoinErrror<'static>> {
         if self.blocks.is_empty() {
             let genesis_block = Self::genesis_block(self.len() as u32)?;
-            Ok(self.start_mine(genesis_block))
+            self.start_mine(genesis_block)
         } else {
             let private_key = wallet::wif_to_private_key_from_file(MINER_KEY_PATH)?;
             let public_key = wallet::private_key_to_public_key(&private_key)?;
-            let pub_address = wallet::get_address(&public_key)?;
-            let pk_hash = wallet::address_to_pkhash(&pub_address)?;
+            let pk_hash = wallet::pk_hash_from_public_key(&public_key);
             let mut pending_transactions =
                 pending_pool::get_last_transactions(Some(BLOCK_TRANSACTIONS_COUNT))?;
-            let coinbase_transaction = Self::get_coinbase_transaction(
-                &pk_hash,
-                self.len() as u32,
-                DEFAULT_COINBASE_AMOUNT,
-            )?;
-            pending_transactions.insert(0, coinbase_transaction);
-            let mut deserialised_transactions = vec![];
-            for pending_transaction in &pending_transactions {
-                let deserialised_transaction = serializer::deserialize(pending_transaction)?;
-                deserialised_transactions.push(deserialised_transaction);
-            }
+            let coinbase_transaction =
+                CoinBaseTransaction::new(&pk_hash, self.len() as u32, DEFAULT_COINBASE_AMOUNT);
+            let coinbase_transaction_serialized = serializer::serialize(&coinbase_transaction)?;
+            pending_transactions.insert(0, coinbase_transaction_serialized);
             let block = Block::new(
                 self.blocks[self.blocks.len() - 1].hash(),
                 pending_transactions,
             );
             block.validate_transactions(&self.utxo)?;
-            self.start_mine(block);
+            self.start_mine(block)?;
             pending_pool::delete_last_n_transactions(BLOCK_TRANSACTIONS_COUNT)?;
-            self.utxo.recalculate_utxos(&deserialised_transactions);
             Ok(())
         }
     }
 
-    pub fn start_mine(&mut self, mut block: Block) {
+    pub fn start_mine(&mut self, mut block: Block) -> Result<(), RitCoinErrror<'static>> {
         let mut start = Instant::now();
         while !block.hash().starts_with(&[0; DEFAULT_DIFFICULTY]) {
             block.increment_nonce();
@@ -98,7 +89,15 @@ impl BlockChain {
                 start = Instant::now();
             }
         }
-        self.blocks.push(block)
+        let mut deserialised_transactions = vec![];
+        for serialized_transaction in block.get_transactions() {
+            let deserialised_transaction = serializer::deserialize(serialized_transaction)?;
+            deserialised_transactions.push(deserialised_transaction);
+        }
+        self.utxo.recalculate_utxos(&deserialised_transactions);
+        self.blocks.push(block);
+        println!("New block mined {:?}", self.len());
+        Ok(())
     }
 
     pub fn resolve_conflicts(&mut self) -> Result<(), RitCoinErrror<'static>> {
@@ -115,7 +114,7 @@ impl BlockChain {
     pub fn verify_chain(&self) -> Result<(), RitCoinErrror<'static>> {
         self.blocks[0].validate_transactions(&self.utxo)?;
         for i in 0..self.blocks.len() - 1 {
-            self.blocks[i+1].validate_transactions(&self.utxo)?;
+            self.blocks[i + 1].validate_transactions(&self.utxo)?;
             if !(self.blocks[i].hash() == self.blocks[i + 1].get_previous_hash()) {
                 return Err(RitCoinErrror::from(
                     "previous block hash in next block do not match current block hash",
@@ -125,22 +124,13 @@ impl BlockChain {
         Ok(())
     }
 
-    pub fn get_coinbase_transaction(
-        pk_hash: &[u8],
-        block_height: u32,
-        coinbase_amount: u64,
-    ) -> Result<Vec<u8>, RitCoinErrror<'static>> {
-        let coinbase_transaction = CoinBaseTransaction::new(pk_hash, block_height, coinbase_amount);
-        serializer::serialize(&coinbase_transaction)
-    }
-
     pub fn genesis_block(block_height: u32) -> Result<Block, RitCoinErrror<'static>> {
         let private_key = wallet::wif_to_private_key_from_file(MINER_KEY_PATH)?;
         let public_key = wallet::private_key_to_public_key(&private_key)?;
-        let pub_address = wallet::get_address(&public_key)?;
-        let pk_hash = wallet::address_to_pkhash(&pub_address)?;
-        let coinbase_transaction_serialized =
-            Self::get_coinbase_transaction(&pk_hash, block_height, DEFAULT_COINBASE_AMOUNT)?;
+        let pk_hash = wallet::pk_hash_from_public_key(&public_key);
+        let coinbase_transaction =
+            CoinBaseTransaction::new(&pk_hash, block_height, DEFAULT_COINBASE_AMOUNT);
+        let coinbase_transaction_serialized = serializer::serialize(&coinbase_transaction)?;
         Ok(Block::new(
             vec![0; 32],
             vec![coinbase_transaction_serialized],

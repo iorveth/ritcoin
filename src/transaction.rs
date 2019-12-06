@@ -95,7 +95,6 @@ impl Output {
         let mut script_pubkey = Vec::new();
         script_pubkey.push(OP_DUP);
         script_pubkey.push(OP_HASH160);
-        script_pubkey.push(receiver_pkhash.len() as u8);
         script_pubkey.extend_from_slice(receiver_pkhash);
         script_pubkey.push(OP_EQUALVERIFY);
         script_pubkey.push(OP_CHECKSIG);
@@ -257,15 +256,20 @@ impl Transaction {
                 &input.previous_output.tx_id,
                 input.previous_output.index,
             ) {
-                inputs_sum+=amount;
+                inputs_sum += amount;
                 script::execute(input.get_sig_script(), script_pubkey, &self.hash_one(input))?;
             }
         }
-        let outputs_sum = self.tx_out.iter().fold(0_u64, |acc, output| acc + output.amount);
+        let outputs_sum = self
+            .tx_out
+            .iter()
+            .fold(0_u64, |acc, output| acc + output.amount);
         if inputs_sum == outputs_sum {
             Ok(())
         } else {
-            Err(RitCoinErrror::from("Sum of inputs isn`t equal to sum of outputs"))
+            Err(RitCoinErrror::from(
+                "Sum of inputs isn`t equal to sum of outputs",
+            ))
         }
     }
 

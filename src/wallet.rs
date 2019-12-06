@@ -9,12 +9,12 @@ const VERSION_NUMBER: u8 = 0x80;
 
 pub fn private_key_to_wif_from_file(path: &str) -> Result<String, RitCoinErrror<'static>> {
     let private_key = fs::read_to_string(path)?;
-    private_key_to_wif(private_key)
+    private_key_to_wif(&private_key)
 }
 
 pub fn wif_to_private_key_from_file(path: &str) -> Result<Vec<u8>, RitCoinErrror<'static>> {
     let private_key_wif = fs::read_to_string(path)?;
-    Ok(wif_to_private_key(private_key_wif)?)
+    Ok(wif_to_private_key(&private_key_wif)?)
 }
 
 fn get_checksum(key: &[u8]) -> Result<Vec<u8>, RitCoinErrror<'static>> {
@@ -28,7 +28,7 @@ fn get_checksum(key: &[u8]) -> Result<Vec<u8>, RitCoinErrror<'static>> {
     Ok(hash2[..4].to_vec())
 }
 
-pub fn private_key_to_wif(key: String) -> Result<String, RitCoinErrror<'static>> {
+pub fn private_key_to_wif(key: &str) -> Result<String, RitCoinErrror<'static>> {
     let mut key = hex::decode(key)?;
     key.insert(0, VERSION_NUMBER);
     let checksum = get_checksum(&key)?;
@@ -36,7 +36,7 @@ pub fn private_key_to_wif(key: String) -> Result<String, RitCoinErrror<'static>>
     Ok(bs58::encode(key).into_string())
 }
 
-pub fn wif_to_private_key(key: String) -> Result<Vec<u8>, bs58::decode::Error> {
+pub fn wif_to_private_key(key: &str) -> Result<Vec<u8>, bs58::decode::Error> {
     let key = bs58::decode(key).into_vec()?;
     let (private_key, _) = key.split_at(key.len() - 4);
     Ok(private_key[1..].to_vec())

@@ -15,15 +15,15 @@ fn read_cli(
     ritcoin_state: Arc<RitCoinState>,
 ) -> Result<(), RitCoinErrror<'static>> {
     match command {
-        "new" => wallet_cli::new(ADDRESS_PATH),
         "new -m" => miner_cli::new(),
+        "new" => wallet_cli::new(ADDRESS_PATH),
+        command if command.starts_with("import -m") => {
+            let path = command.split_ascii_whitespace().collect::<Vec<&str>>()[2];
+            miner_cli::import(path)
+        }
         command if command.starts_with("import") => {
             let path = command.split_ascii_whitespace().collect::<Vec<&str>>()[1];
             wallet_cli::import(path, ADDRESS_PATH)
-        }
-        command if command.starts_with("import") && command.ends_with("-m") => {
-            let path = command.split_ascii_whitespace().collect::<Vec<&str>>()[1];
-            miner_cli::import(path)
         }
         command if command.starts_with("send") => {
             let command = command.replace(',', "");

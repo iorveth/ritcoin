@@ -1,12 +1,12 @@
 use crate::errors::*;
 use crate::merkle::*;
 use crate::serializer;
-use crate::utxo_set::{Utxo, UtxoSet};
+use crate::utxo_set::UtxoSet;
+use crate::wallet;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::HashSet;
 use std::time::SystemTime;
-use crate::wallet;
 
 const BLOCK_VERSION: i32 = 1;
 
@@ -44,9 +44,12 @@ impl Block {
             .map(|pk_hash| utxo_set.by_pkhash(pk_hash))
             .flatten()
             .collect();
-        for transaction in &self.transactions {
-            let transaction = serializer::deserialize(transaction)?;
-            transaction.validate(&utxos)?;
+        // Do not validate coinbase transaction
+        for (i, transaction) in self.transactions.iter().enumerate() {
+            if i != 0 {
+                let transaction = serializer::deserialize(transaction)?;
+                transaction.validate(&utxos)?;
+            }
         }
         Ok(())
     }
@@ -79,10 +82,12 @@ impl Block {
 
     pub fn pub_keys_from_txins(&self) -> Result<Vec<Vec<u8>>, RitCoinErrror<'static>> {
         let mut pub_keys_set = HashSet::new();
-        for transaction in &self.transactions {
-            let transaction = serializer::deserialize(transaction)?;
-            let pub_keys = transaction.get_pub_keys_from_inputs();
-            pub_keys_set = pub_keys_set.union(&pub_keys).cloned().collect();
+        for (i, transaction) in self.transactions.iter().enumerate() {
+            if i != 0 {
+                let transaction = serializer::deserialize(transaction)?;
+                let pub_keys = transaction.get_pub_keys_from_inputs();
+                pub_keys_set = pub_keys_set.union(&pub_keys).cloned().collect();
+            }
         }
         Ok(pub_keys_set
             .into_iter()

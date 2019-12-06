@@ -1,6 +1,6 @@
 use crate::handlers::*;
 use crate::*;
-use actix_web::{middleware, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{middleware, web, App, HttpServer};
 use std::env;
 
 pub const DEFAULT_ADDRESS: &str = "0.0.0.0:3000";
