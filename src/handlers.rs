@@ -52,7 +52,6 @@ pub fn handle_nodes(ritcoin_state: web::Data<Arc<RitCoinState>>) -> HttpResponse
 }
 
 pub fn handle_chain_length(ritcoin_state: web::Data<Arc<RitCoinState>>) -> HttpResponse {
-    println!("hello");
     if let Ok(blockchain_state) = ritcoin_state.blockchain.lock() {
         HttpResponse::Ok().json(blockchain_state.len())
     } else {

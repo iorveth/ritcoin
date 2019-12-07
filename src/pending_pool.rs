@@ -26,7 +26,7 @@ pub fn delete_last_n_transactions(n: usize) -> Result<(), RitCoinErrror<'static>
         .append(true)
         .read(true)
         .open(PENDING_POOL_PATH)?;
-    for tx in data.lines() {
+    for tx in data.lines().skip(n) {
         writeln!(file, "{:?}", tx)?;
     }
     Ok(())
