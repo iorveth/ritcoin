@@ -38,13 +38,17 @@ fn read_cli(
             )
         }
         command if command.starts_with("broadcast") => {
-            let broadcast_parameters = command.split_ascii_whitespace().collect::<Vec<&str>>();
-            let serialized_tx = broadcast_parameters[1];
-            match broadcast_parameters.get(2) {
-                Some(flag) if *flag == "-t" => {
+            let broadcast_parameters = command.splitn(2, ' ').collect::<Vec<&str>>();
+            match broadcast_parameters.get(1) {
+                Some(broadcast_parameters) if broadcast_parameters.starts_with("-t") => {
+                    let broadcast_parameters = command.splitn(2, ' ').collect::<Vec<&str>>();
+                    let serialized_tx = broadcast_parameters[1];
                     wallet_cli::broadcast(serialized_tx, prepared_transactions, true)
                 }
-                _ => wallet_cli::broadcast(serialized_tx, prepared_transactions, false),
+                _ => {
+                    let serialized_tx = broadcast_parameters[1];
+                    wallet_cli::broadcast(serialized_tx, prepared_transactions, false)
+                }
             }
         }
         command if command.starts_with("balance") => {

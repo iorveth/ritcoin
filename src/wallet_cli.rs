@@ -83,13 +83,14 @@ pub fn broadcast(
     prepared_transactions: &mut Vec<Vec<u8>>,
     testnet_option: bool,
 ) -> Result<(), RitCoinErrror<'static>> {
+    println!("{:?}", serialized_tx);
     let tx = prepared_transactions
         .iter()
         .position(|tx| *tx == pending_pool::tx_str_to_vec(serialized_tx))
         .map(|i| prepared_transactions.remove(i));
     if let Some(tx) = &tx {
         let client = Client::new();
-        println!("{:?}", tx);
+        println!("Huy {:?}", tx);
         let url = DEFAULT_ADDRESS.to_owned() + BROADCAST_RESOURCE;
         let mut map = HashMap::new();
         map.insert("tx", tx);
