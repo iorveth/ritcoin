@@ -36,7 +36,7 @@ fn main() -> std::io::Result<()> {
     let ritcoin_state = Arc::new(RitCoinState::new());
     let ritcoin_state_cloned = ritcoin_state.clone();
     thread::spawn(move || {
-        if let Err(e) = cli(ritcoin_state_cloned) {
+        while let Err(e) = cli(ritcoin_state_cloned.clone()) {
             println!("{:?}", e)
         }
     });

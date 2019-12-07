@@ -51,10 +51,11 @@ pub fn send(
     let private_key = wallet::wif_to_private_key(&private_key_wif)?;
     let sender_pkhash = wallet::address_to_pkhash(&sender_adress)?;
     let receiver_pkhash = wallet::address_to_pkhash(&receiver_address)?;
-    if let Ok(blockchain_state) = ritcoin_state.blockchain.lock() {
-        let utxos = blockchain_state.get_utxos_ref().by_pkhash(&sender_pkhash);
-        let used_utxos = UtxoSet::get_used_utxos(utxos, amount);
-        if let Some(used_utxos) = used_utxos {
+    if let Ok(mut blockchain_state) = ritcoin_state.blockchain.lock() {
+        if let Some(used_utxos) = blockchain_state
+            .get_utxos_ref()
+            .get_used_utxos(&sender_pkhash, amount)
+        {
             let inputs = Input::create_inputs(&used_utxos);
             let utxo_total = UtxoSet::get_total_amount(&used_utxos);
             let outputs =
@@ -65,12 +66,21 @@ pub fn send(
             let serialized = serializer::serialize(&transaction)?;
             println!("{:?}", serialized);
             prepared_transactions.push(serialized);
-            Ok(())
         } else {
-            Err(RitCoinErrror::from(
+            return Err(RitCoinErrror::from(
                 "Not enought utxo`s to create transaction!",
-            ))
+            ));
+        };
+        if let Some(used_utxos) = blockchain_state
+            .clone()
+            .get_utxos_ref()
+            .get_used_utxos(&sender_pkhash, amount)
+        {
+            blockchain_state
+                .get_utxos_mut_ref()
+                .lock_utxos(&sender_pkhash, &used_utxos);
         }
+        Ok(())
     } else {
         Err(RitCoinErrror::from(
             "Error, when accessing blockchain state occured",

@@ -22,12 +22,25 @@ impl DerefMut for Stack {
 impl Stack {
     fn new(sig_script: &[u8]) -> Self {
         let mut sig_script = sig_script.to_vec();
-        //remove sig length
-        sig_script.remove(0);
-        //remove sig type
-        sig_script.remove(71);
-        //remove pub_key len
-        sig_script.remove(71);
+        match sig_script.len() {
+            138 => {
+                //remove sig length
+                sig_script.remove(0);
+                //remove sig type
+                sig_script.remove(70);
+                //remove pub_key len
+                sig_script.remove(70);
+            }
+            139 => {
+                //remove sig length
+                sig_script.remove(0);
+                //remove sig type
+                sig_script.remove(71);
+                //remove pub_key len
+                sig_script.remove(71);
+            }
+            _ => (),
+        }
         Self(vec![
             sig_script[..sig_script.len() - 65].to_owned(),
             sig_script[sig_script.len() - 65..].to_owned(),

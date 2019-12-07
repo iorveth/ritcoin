@@ -83,7 +83,7 @@ impl Input {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct Output {
     amount: u64,
     script_length: u16,
