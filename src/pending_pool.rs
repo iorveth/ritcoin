@@ -5,8 +5,8 @@ use crate::utxo_set::UtxoSet;
 use crate::wallet;
 pub use std::fs::{self, File, OpenOptions};
 pub use std::io::prelude::*;
-use std::io::{BufRead, BufReader};
 use std::io::SeekFrom;
+use std::io::{BufRead, BufReader};
 
 const PENDING_POOL_PATH: &str = "data/pending_pool.txt";
 
@@ -36,6 +36,7 @@ pub fn accept_serialized_transaction(
     serialized_transaction: &[u8],
     utxo_set: &UtxoSet,
 ) -> Result<(), RitCoinErrror<'static>> {
+    is_saved_already(serialized_transaction)?;
     let transaction = serializer::deserialize(serialized_transaction)?;
     let pub_keys = transaction.get_pub_keys_from_inputs();
     let pk_hashes: Vec<_> = pub_keys
@@ -51,10 +52,19 @@ pub fn accept_serialized_transaction(
     save_to_mempool(serialized_transaction)
 }
 
+pub fn is_saved_already(serialized_transaction: &[u8]) -> Result<(), RitCoinErrror<'static>> {
+    for tx in get_last_transactions(None)? {
+        if tx == serialized_transaction {
+            return Err(RitCoinErrror::from("Tx was already saved to mempool!"));
+        }
+    }
+    Ok(())
+}
+
 pub fn tx_str_to_vec(tx: &str) -> Vec<u8> {
     tx.replace('[', "")
         .replace(']', "")
-        .split(" ,")
+        .split(", ")
         .filter_map(|elem| elem.parse::<u8>().ok())
         .collect()
 }

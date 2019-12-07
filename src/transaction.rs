@@ -230,7 +230,6 @@ impl Transaction {
 
     pub fn calculate_sig_script(signature: &[u8], pub_key: &[u8]) -> Vec<u8> {
         let mut sig_script = vec![];
-        println!("{:?}", signature.len());
         sig_script.push((signature.len() + 1) as u8);
         sig_script.extend_from_slice(signature);
         sig_script.push(1);
@@ -249,13 +248,17 @@ impl Transaction {
         Ok(())
     }
 
-    pub fn get_original_hashes(&self, utxos: &[&Utxo]) -> Vec<Vec<u8>>{
+    pub fn get_original_hashes(&self, utxos: &[&Utxo]) -> Vec<Vec<u8>> {
         let mut transaction = self.clone();
         for input in &mut transaction.tx_in {
-            if let Some((script_pubkey, _)) = UtxoSet::get_validation_data(utxos, &input.previous_output.tx_id, input.previous_output.index) {
+            if let Some((script_pubkey, _)) = UtxoSet::get_validation_data(
+                utxos,
+                &input.previous_output.tx_id,
+                input.previous_output.index,
+            ) {
                 input.script_bytes = script_pubkey.len() as u16;
                 input.sig_script = script_pubkey.to_vec();
-            } 
+            }
         }
         transaction.hash_all()
     }
