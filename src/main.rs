@@ -32,11 +32,12 @@ impl RitCoinState {
     }
 }
 
-fn main() {
+fn main() -> std::io::Result<()>{
     let ritcoin_state = Arc::new(RitCoinState::new());
     let ritcoin_state_cloned = ritcoin_state.clone();
-    thread::spawn(move || server::run(ritcoin_state));
-    if let Err(e) = cli(ritcoin_state_cloned) {
+    thread::spawn(move || if let Err(e) = cli(ritcoin_state_cloned) {
         println!("{:?}", e)
-    };
+    });
+    server::run(ritcoin_state)?;
+    Ok(())
 }

@@ -65,6 +65,7 @@ impl BlockChain {
             let pk_hash = wallet::pk_hash_from_public_key(&public_key);
             let mut pending_transactions =
                 pending_pool::get_last_transactions(Some(BLOCK_TRANSACTIONS_COUNT))?;
+                println!("Here?");
             let coinbase_transaction =
                 CoinBaseTransaction::new(&pk_hash, self.len() as u32, DEFAULT_COINBASE_AMOUNT);
             let coinbase_transaction_serialized = serializer::serialize(&coinbase_transaction)?;

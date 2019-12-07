@@ -252,9 +252,10 @@ impl Transaction {
     pub fn get_original_hashes(&self, utxos: &[&Utxo]) -> Vec<Vec<u8>>{
         let mut transaction = self.clone();
         for input in &mut transaction.tx_in {
-            let (script_pubkey, _) = UtxoSet::get_validation_data(utxos, &input.previous_output.tx_id, input.previous_output.index).unwrap();
-            input.script_bytes = script_pubkey.len() as u16;
-            input.sig_script = script_pubkey.to_vec();
+            if let Some((script_pubkey, _)) = UtxoSet::get_validation_data(utxos, &input.previous_output.tx_id, input.previous_output.index) {
+                input.script_bytes = script_pubkey.len() as u16;
+                input.sig_script = script_pubkey.to_vec();
+            } 
         }
         transaction.hash_all()
     }

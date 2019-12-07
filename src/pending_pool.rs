@@ -6,6 +6,7 @@ use crate::wallet;
 pub use std::fs::{self, File, OpenOptions};
 pub use std::io::prelude::*;
 use std::io::{BufRead, BufReader};
+use std::io::SeekFrom;
 
 const PENDING_POOL_PATH: &str = "data/pending_pool.txt";
 
@@ -59,7 +60,8 @@ pub fn tx_str_to_vec(tx: &str) -> Vec<u8> {
 }
 
 pub fn get_last_transactions(n: Option<usize>) -> Result<Vec<Vec<u8>>, RitCoinErrror<'static>> {
-    let input = File::open(PENDING_POOL_PATH)?;
+    let mut input = File::open(PENDING_POOL_PATH)?;
+    input.seek(SeekFrom::Start(0))?;
     let buffered = BufReader::new(input);
     let mut transactions = vec![];
     if let Some(n) = n {

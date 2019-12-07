@@ -89,6 +89,7 @@ pub fn broadcast(
         .map(|i| prepared_transactions.remove(i));
     if let Some(tx) = &tx {
         let client = Client::new();
+        println!("{:?}", tx);
         let url = DEFAULT_ADDRESS.to_owned() + BROADCAST_RESOURCE;
         let mut map = HashMap::new();
         map.insert("tx", tx);
