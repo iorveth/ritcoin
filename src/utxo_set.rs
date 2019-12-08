@@ -8,7 +8,6 @@ pub struct Utxo {
     tx_id: Vec<u8>,
     index: u32,
     output: Output,
-    locked: bool,
 }
 
 impl Utxo {
@@ -17,7 +16,6 @@ impl Utxo {
             tx_id,
             index,
             output,
-            locked: false,
         }
     }
 
@@ -31,6 +29,14 @@ impl Utxo {
 
     pub fn get_index(&self) -> u32 {
         self.index
+    }
+
+    pub fn is_locked(&self, prepared_transactions: &[Transaction]) -> bool {
+        prepared_transactions.iter().any(|tx| {
+            tx.get_tx_in()
+                .iter()
+                .any(|tx_in| self.tx_id == tx_in.get_previous_output().get_tx_id())
+        })
     }
 }
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -46,18 +52,6 @@ impl UtxoSet {
     pub fn by_pkhash(&self, pkhash: &[u8]) -> Vec<&Utxo> {
         self.utxos
             .iter()
-            .filter(|utxo| {
-                utxo.get_output()
-                    .get_script_pubkey()
-                    .windows(pkhash.len())
-                    .any(|hash| hash == pkhash)
-            })
-            .collect()
-    }
-
-    pub fn by_pkhash_mut(&mut self, pkhash: &[u8]) -> Vec<&mut Utxo> {
-        self.utxos
-            .iter_mut()
             .filter(|utxo| {
                 utxo.get_output()
                     .get_script_pubkey()
@@ -110,12 +104,18 @@ impl UtxoSet {
         }
     }
 
-    pub fn get_used_utxos(&self, sender_pkhash: &[u8], amount: u64) -> Option<Vec<&Utxo>> {
+    pub fn get_used_utxos(
+        &self,
+        sender_pkhash: &[u8],
+        amount: u64,
+        prepared_transactions: &[Transaction],
+    ) -> Option<Vec<&Utxo>> {
         let mut utxos: Vec<_> = self
             .by_pkhash(sender_pkhash)
             .into_iter()
-            .filter(|utxo| !utxo.locked)
+            .filter(|utxo| !utxo.is_locked(prepared_transactions))
             .collect();
+        println!("{:?}", utxos);
         let exact_utxo = utxos
             .iter()
             .filter(|utxo| utxo.get_output().get_amount() == amount)
@@ -150,11 +150,10 @@ impl UtxoSet {
                 let mut total_amount = 0;
                 let mut i = 0;
                 for utxo in &utxos {
+                    total_amount += utxo.get_output().get_amount();
+                    i += 1;
                     if total_amount > amount {
                         return Some(utxos.into_iter().take(i).collect());
-                    } else {
-                        total_amount += utxo.get_output().get_amount();
-                        i += 1;
                     }
                 }
                 None
@@ -168,15 +167,5 @@ impl UtxoSet {
         utxos
             .iter()
             .fold(0, |acc, utxo| acc + utxo.get_output().get_amount())
-    }
-
-    pub fn lock_utxos(&mut self, sender_pkhash: &[u8], utxos: &[&Utxo]) {
-        for utxo in self.by_pkhash_mut(sender_pkhash) {
-            for selected_utxo in utxos {
-                if *utxo == **selected_utxo {
-                    utxo.locked = true;
-                }
-            }
-        }
     }
 }

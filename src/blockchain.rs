@@ -14,7 +14,7 @@ use std::time::Instant;
 const DEFAULT_DIFFICULTY: usize = 2;
 const MINER_KEY_PATH: &str = "data/miner_key.txt";
 const BLOCK_TRANSACTIONS_COUNT: usize = 3;
-const DEFAULT_COINBASE_AMOUNT: u64 = 100;
+const DEFAULT_COINBASE_AMOUNT: u64 = 50;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct BlockChain {
@@ -38,10 +38,6 @@ impl BlockChain {
 
     pub fn get_utxos_ref(&self) -> &UtxoSet {
         &self.utxo
-    }
-
-    pub fn get_utxos_mut_ref(&mut self) -> &mut UtxoSet {
-        &mut self.utxo
     }
 
     pub fn exist(address: &str) -> Result<Self, RitCoinErrror<'static>> {

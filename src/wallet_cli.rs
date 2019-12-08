@@ -51,11 +51,19 @@ pub fn send(
     let private_key = wallet::wif_to_private_key(&private_key_wif)?;
     let sender_pkhash = wallet::address_to_pkhash(&sender_adress)?;
     let receiver_pkhash = wallet::address_to_pkhash(&receiver_address)?;
-    if let Ok(mut blockchain_state) = ritcoin_state.blockchain.lock() {
-        if let Some(used_utxos) = blockchain_state
-            .get_utxos_ref()
-            .get_used_utxos(&sender_pkhash, amount)
-        {
+    let mut prepared_transactions_deserialized = Vec::with_capacity(prepared_transactions.len());
+    for tx in prepared_transactions.iter() {
+        if !tx.is_empty() {
+            let deserialized_tx = serializer::deserialize(tx)?;
+            prepared_transactions_deserialized.push(deserialized_tx)
+        }
+    }
+    if let Ok(blockchain_state) = ritcoin_state.blockchain.lock() {
+        if let Some(used_utxos) = blockchain_state.get_utxos_ref().get_used_utxos(
+            &sender_pkhash,
+            amount,
+            &prepared_transactions_deserialized,
+        ) {
             let inputs = Input::create_inputs(&used_utxos);
             let utxo_total = UtxoSet::get_total_amount(&used_utxos);
             let outputs =
@@ -66,26 +74,28 @@ pub fn send(
             let serialized = serializer::serialize(&transaction)?;
             println!("{:?}", serialized);
             prepared_transactions.push(serialized);
+            Ok(())
         } else {
-            return Err(RitCoinErrror::from(
+            Err(RitCoinErrror::from(
                 "Not enought utxo`s to create transaction!",
-            ));
-        };
-        if let Some(used_utxos) = blockchain_state
-            .clone()
-            .get_utxos_ref()
-            .get_used_utxos(&sender_pkhash, amount)
-        {
-            blockchain_state
-                .get_utxos_mut_ref()
-                .lock_utxos(&sender_pkhash, &used_utxos);
+            ))
         }
-        Ok(())
     } else {
         Err(RitCoinErrror::from(
             "Error, when accessing blockchain state occured",
         ))
     }
+}
+
+pub fn unlock_all(prepared_transactions: &mut Vec<Vec<u8>>) {
+    *prepared_transactions = vec![];
+}
+
+pub fn unlock(serialized_tx: &str, prepared_transactions: &mut Vec<Vec<u8>>) {
+    prepared_transactions
+        .iter()
+        .position(|tx| *tx == pending_pool::tx_str_to_vec(serialized_tx))
+        .map(|i| prepared_transactions.remove(i));
 }
 
 pub fn broadcast(

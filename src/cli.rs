@@ -41,8 +41,7 @@ fn read_cli(
             let broadcast_parameters = command.splitn(2, ' ').collect::<Vec<&str>>();
             match broadcast_parameters.get(1) {
                 Some(broadcast_parameters) if broadcast_parameters.starts_with("-t") => {
-                    let broadcast_parameters = command.splitn(2, ' ').collect::<Vec<&str>>();
-                    let serialized_tx = broadcast_parameters[1];
+                    let serialized_tx = command.splitn(2, ' ').collect::<Vec<&str>>()[1];
                     wallet_cli::broadcast(serialized_tx, prepared_transactions, true)
                 }
                 _ => {
@@ -50,6 +49,15 @@ fn read_cli(
                     wallet_cli::broadcast(serialized_tx, prepared_transactions, false)
                 }
             }
+        }
+        "unlock all" => {
+            wallet_cli::unlock_all(prepared_transactions);
+            Ok(())
+        }
+        command if command.starts_with("unlock") => {
+            let serialized_tx = command.splitn(2, ' ').collect::<Vec<&str>>()[1];
+            wallet_cli::unlock(serialized_tx, prepared_transactions);
+            Ok(())
         }
         command if command.starts_with("balance") => {
             let address = command.split_ascii_whitespace().collect::<Vec<&str>>()[1];

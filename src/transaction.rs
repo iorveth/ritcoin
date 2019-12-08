@@ -25,6 +25,10 @@ impl OutPoint {
         Self { tx_id, index }
     }
 
+    pub fn get_tx_id(&self) -> &[u8] {
+        &self.tx_id
+    }
+
     pub fn get(&self) -> (&[u8], u32) {
         (&self.tx_id, self.index)
     }
