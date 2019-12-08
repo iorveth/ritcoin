@@ -280,13 +280,27 @@ impl Transaction {
             .tx_out
             .iter()
             .fold(0_u64, |acc, output| acc + output.amount);
-        if inputs_sum == outputs_sum {
+        if inputs_sum >= outputs_sum {
             Ok(())
         } else {
             Err(RitCoinErrror::from(
-                "Sum of inputs isn`t equal to sum of outputs",
+                "Sum of all inputs is less than sum of outputs",
             ))
         }
+    }
+
+    pub fn verify(&self, utxos: &[&Utxo]) -> Result<(), RitCoinErrror<'static>> {
+        let hashes = self.get_original_hashes(utxos);
+        for (i, input) in self.tx_in.iter().enumerate() {
+            if let Some((script_pubkey, _)) = UtxoSet::get_validation_data(
+                utxos,
+                &input.previous_output.tx_id,
+                input.previous_output.index,
+            ) {
+                script::execute(input.get_sig_script(), script_pubkey, &hashes[i])?;
+            }
+        }
+        Ok(())
     }
 
     pub fn get_pub_keys_from_inputs(&self) -> HashSet<Vec<u8>> {

@@ -55,6 +55,6 @@ pub fn handle_chain_length(ritcoin_state: web::Data<Arc<RitCoinState>>) -> HttpR
     if let Ok(blockchain_state) = ritcoin_state.blockchain.lock() {
         HttpResponse::Ok().json(blockchain_state.len())
     } else {
-        HttpResponse::BadRequest().body(format!("handle_chain error occured"))
+        HttpResponse::BadRequest().body(format!("handle_chain_length error occured"))
     }
 }

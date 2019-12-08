@@ -18,7 +18,6 @@ fn merkle_root(mut transaction_hashes: Vec<Vec<u8>>) -> Vec<u8> {
         }
         _ => (),
     };
-    println!("{:?}", transaction_hashes);
     let mut parent_hashes = vec![];
     for i in (0..transaction_hashes.len() - 1).step_by(2) {
         let parent = merge(&transaction_hashes[i], &transaction_hashes[i + 1]);

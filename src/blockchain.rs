@@ -2,7 +2,7 @@ use crate::block::Block;
 use crate::errors::*;
 use crate::pending_pool;
 use crate::serializer;
-use crate::server::{CHAIN_RESOURCE, DEFAULT_ADDRESS};
+use crate::server::{CHAIN_RESOURCE, DEFAULT_NODE_ADDRESS};
 use crate::transaction::*;
 use crate::utxo_set::*;
 use crate::wallet;
@@ -25,7 +25,7 @@ pub struct BlockChain {
 
 impl BlockChain {
     pub fn new() -> Self {
-        if let Ok(existing_blockchain) = Self::exist(DEFAULT_ADDRESS) {
+        if let Ok(existing_blockchain) = Self::exist(DEFAULT_NODE_ADDRESS) {
             existing_blockchain
         } else {
             Self {
@@ -73,7 +73,7 @@ impl BlockChain {
                 self.blocks[self.blocks.len() - 1].hash(),
                 pending_transactions,
             );
-            block.validate_transactions(&self.utxo)?;
+            block.validate_transactions(&self.utxo, false)?;
             self.start_mine(block)?;
             pending_pool::delete_last_n_transactions(BLOCK_TRANSACTIONS_COUNT)?;
             Ok(())
@@ -102,9 +102,16 @@ impl BlockChain {
 
     pub fn resolve_conflicts(&mut self) -> Result<(), RitCoinErrror<'static>> {
         for node_address in &self.nodes {
-            if let Ok(node) = Self::exist(&node_address.to_string()) {
-                if node.len() > self.len() && node.verify_chain().is_ok() {
-                    self.blocks = node.blocks
+            let address = "http://".to_owned() + &node_address.to_string();
+            if let Ok(node) = Self::exist(&address) {
+                if node.len() > self.len() {
+                    match node.verify_chain() {
+                        Ok(_) => {
+                            self.blocks = node.blocks;
+                            self.utxo = node.utxo;
+                        }
+                        Err(e) => println!("{:?}", e),
+                    }
                 }
             }
         }
@@ -112,9 +119,9 @@ impl BlockChain {
     }
 
     pub fn verify_chain(&self) -> Result<(), RitCoinErrror<'static>> {
-        self.blocks[0].validate_transactions(&self.utxo)?;
+        self.blocks[0].validate_transactions(&self.utxo, true)?;
         for i in 0..self.blocks.len() - 1 {
-            self.blocks[i + 1].validate_transactions(&self.utxo)?;
+            self.blocks[i + 1].validate_transactions(&self.utxo, true)?;
             if !(self.blocks[i].hash() == self.blocks[i + 1].get_previous_hash()) {
                 return Err(RitCoinErrror::from(
                     "previous block hash in next block do not match current block hash",

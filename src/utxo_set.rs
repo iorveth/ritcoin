@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 const UTXO_SET_PATH: &str = "data/utxo_set.txt";
 
-#[derive(Serialize, Deserialize, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]
 pub struct Utxo {
     tx_id: Vec<u8>,
     index: u32,
@@ -33,7 +33,7 @@ impl Utxo {
         self.index
     }
 }
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct UtxoSet {
     utxos: Vec<Utxo>,
 }

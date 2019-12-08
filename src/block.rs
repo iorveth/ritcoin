@@ -33,7 +33,11 @@ impl Block {
         }
     }
 
-    pub fn validate_transactions(&self, utxo_set: &UtxoSet) -> Result<(), RitCoinErrror<'static>> {
+    pub fn validate_transactions(
+        &self,
+        utxo_set: &UtxoSet,
+        verify_only: bool,
+    ) -> Result<(), RitCoinErrror<'static>> {
         let pub_keys = self.pub_keys_from_txins()?;
         let pk_hashes: Vec<_> = pub_keys
             .iter()
@@ -48,7 +52,11 @@ impl Block {
         for (i, transaction) in self.transactions.iter().enumerate() {
             if i != 0 {
                 let transaction = serializer::deserialize(transaction)?;
-                transaction.validate(&utxos)?;
+                if verify_only {
+                    transaction.verify(&utxos)?
+                } else {
+                    transaction.validate(&utxos)?;
+                }
             }
         }
         Ok(())
