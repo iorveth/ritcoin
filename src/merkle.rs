@@ -12,13 +12,14 @@ fn merkle_root(mut transaction_hashes: Vec<Vec<u8>>) -> Vec<u8> {
     match transaction_hashes.len() {
         0 => return vec![],
         1 => return transaction_hashes.remove(0),
+        2 => return merge(&transaction_hashes[0], &transaction_hashes[1]),
         len if len % 2 == 1 => {
             transaction_hashes.push(transaction_hashes[transaction_hashes.len() - 1].clone())
         }
         _ => (),
     };
     let mut parent_hashes = vec![];
-    for i in 0..transaction_hashes.len() - 1 {
+    for i in (0..transaction_hashes.len() - 1).step_by(2) {
         let parent = merge(&transaction_hashes[i], &transaction_hashes[i + 1]);
         parent_hashes.push(parent)
     }

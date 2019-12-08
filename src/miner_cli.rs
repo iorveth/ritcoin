@@ -36,6 +36,8 @@ pub fn consensus(ritcoin_state: Arc<RitCoinState>) -> Result<(), RitCoinErrror<'
     if let Ok(mut blockchain_state) = ritcoin_state.blockchain.lock() {
         blockchain_state.resolve_conflicts()
     } else {
-        Err(RitCoinErrror::from("Error, when resolving conflicts occured"))
+        Err(RitCoinErrror::from(
+            "Error, when resolving conflicts occured",
+        ))
     }
 }

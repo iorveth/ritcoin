@@ -1,8 +1,11 @@
 use crate::errors::*;
+use crate::serializer;
 use crate::transaction::Transaction;
-use crate::{serializer, tx_validator};
+use crate::utxo_set::UtxoSet;
+use crate::wallet;
 pub use std::fs::{self, File, OpenOptions};
 pub use std::io::prelude::*;
+use std::io::SeekFrom;
 use std::io::{BufRead, BufReader};
 
 const PENDING_POOL_PATH: &str = "data/pending_pool.txt";
@@ -23,7 +26,7 @@ pub fn delete_last_n_transactions(n: usize) -> Result<(), RitCoinErrror<'static>
         .append(true)
         .read(true)
         .open(PENDING_POOL_PATH)?;
-    for tx in data.lines() {
+    for tx in data.lines().skip(n) {
         writeln!(file, "{:?}", tx)?;
     }
     Ok(())
@@ -31,22 +34,44 @@ pub fn delete_last_n_transactions(n: usize) -> Result<(), RitCoinErrror<'static>
 
 pub fn accept_serialized_transaction(
     serialized_transaction: &[u8],
+    utxo_set: &UtxoSet,
 ) -> Result<(), RitCoinErrror<'static>> {
-    let (transaction, public_key) = serializer::deserialize(serialized_transaction)?;
-    tx_validator::validate(&transaction, &public_key)?;
+    is_saved_already(serialized_transaction)?;
+    let transaction = serializer::deserialize(serialized_transaction)?;
+    let pub_keys = transaction.get_pub_keys_from_inputs();
+    let pk_hashes: Vec<_> = pub_keys
+        .iter()
+        .map(|pub_key| wallet::pk_hash_from_public_key(pub_key))
+        .collect();
+    let utxos: Vec<_> = pk_hashes
+        .iter()
+        .map(|pk_hash| utxo_set.by_pkhash(pk_hash))
+        .flatten()
+        .collect();
+    transaction.validate(&utxos)?;
     save_to_mempool(serialized_transaction)
+}
+
+pub fn is_saved_already(serialized_transaction: &[u8]) -> Result<(), RitCoinErrror<'static>> {
+    for tx in get_last_transactions(None)? {
+        if tx == serialized_transaction {
+            return Err(RitCoinErrror::from("Tx was already saved to mempool!"));
+        }
+    }
+    Ok(())
 }
 
 pub fn tx_str_to_vec(tx: &str) -> Vec<u8> {
     tx.replace('[', "")
         .replace(']', "")
-        .split(" ,")
+        .split(", ")
         .filter_map(|elem| elem.parse::<u8>().ok())
         .collect()
 }
 
 pub fn get_last_transactions(n: Option<usize>) -> Result<Vec<Vec<u8>>, RitCoinErrror<'static>> {
-    let input = File::open(PENDING_POOL_PATH)?;
+    let mut input = File::open(PENDING_POOL_PATH)?;
+    input.seek(SeekFrom::Start(0))?;
     let buffered = BufReader::new(input);
     let mut transactions = vec![];
     if let Some(n) = n {
@@ -69,7 +94,7 @@ pub fn get_last_transactions_deserialized(
     let serialized_transactions = get_last_transactions(n)?;
     let mut deserialized_transactions = vec![];
     for tx in serialized_transactions {
-        let (deserialized_tx, _) = serializer::deserialize(&tx)?;
+        let deserialized_tx = serializer::deserialize(&tx)?;
         deserialized_transactions.push(deserialized_tx);
     }
     Ok(deserialized_transactions)

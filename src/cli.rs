@@ -15,26 +15,49 @@ fn read_cli(
     ritcoin_state: Arc<RitCoinState>,
 ) -> Result<(), RitCoinErrror<'static>> {
     match command {
-        "new" => wallet_cli::new(ADDRESS_PATH),
         "new -m" => miner_cli::new(),
+        "new" => wallet_cli::new(ADDRESS_PATH),
+        command if command.starts_with("import -m") => {
+            let path = command.split_ascii_whitespace().collect::<Vec<&str>>()[2];
+            miner_cli::import(path)
+        }
         command if command.starts_with("import") => {
             let path = command.split_ascii_whitespace().collect::<Vec<&str>>()[1];
             wallet_cli::import(path, ADDRESS_PATH)
-        }
-        command if command.starts_with("import") && command.ends_with("-m") => {
-            let path = command.split_ascii_whitespace().collect::<Vec<&str>>()[1];
-            miner_cli::import(path)
         }
         command if command.starts_with("send") => {
             let command = command.replace(',', "");
             let send_parameters = command.split_ascii_whitespace().collect::<Vec<&str>>();
             let recipient_address = send_parameters[1];
-            let amount = send_parameters[2].parse::<u32>()?;
-            wallet_cli::send(recipient_address, amount, prepared_transactions)
+            let amount = send_parameters[2].parse::<u64>()?;
+            wallet_cli::send(
+                recipient_address,
+                amount,
+                prepared_transactions,
+                ritcoin_state,
+            )
         }
         command if command.starts_with("broadcast") => {
-            let serialized_tx = command.split_ascii_whitespace().collect::<Vec<&str>>()[1];
-            wallet_cli::broadcast(serialized_tx, prepared_transactions)
+            let broadcast_parameters = command.splitn(2, ' ').collect::<Vec<&str>>();
+            match broadcast_parameters.get(1) {
+                Some(broadcast_parameters) if broadcast_parameters.starts_with("-t") => {
+                    let serialized_tx = command.splitn(2, ' ').collect::<Vec<&str>>()[1];
+                    wallet_cli::broadcast(serialized_tx, prepared_transactions, true)
+                }
+                _ => {
+                    let serialized_tx = broadcast_parameters[1];
+                    wallet_cli::broadcast(serialized_tx, prepared_transactions, false)
+                }
+            }
+        }
+        "unlock all" => {
+            wallet_cli::unlock_all(prepared_transactions);
+            Ok(())
+        }
+        command if command.starts_with("unlock") => {
+            let serialized_tx = command.splitn(2, ' ').collect::<Vec<&str>>()[1];
+            wallet_cli::unlock(serialized_tx, prepared_transactions);
+            Ok(())
         }
         command if command.starts_with("balance") => {
             let address = command.split_ascii_whitespace().collect::<Vec<&str>>()[1];

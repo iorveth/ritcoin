@@ -6,16 +6,17 @@ mod handlers;
 mod hash;
 mod merkle;
 mod miner_cli;
+mod opcodes;
 mod pending_pool;
+mod script;
 mod serializer;
 mod server;
 mod transaction;
-mod tx_validator;
+mod utxo_set;
 mod wallet;
 mod wallet_cli;
 use blockchain::BlockChain;
 use cli::*;
-use errors::*;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
@@ -31,11 +32,14 @@ impl RitCoinState {
     }
 }
 
-fn main() {
+fn main() -> std::io::Result<()> {
     let ritcoin_state = Arc::new(RitCoinState::new());
     let ritcoin_state_cloned = ritcoin_state.clone();
-    thread::spawn(move || server::run(ritcoin_state));
-    if let Err(e) = cli(ritcoin_state_cloned) {
-        println!("{:?}", e)
-    };
+    thread::spawn(move || {
+        while let Err(e) = cli(ritcoin_state_cloned.clone()) {
+            println!("{:?}", e)
+        }
+    });
+    server::run(ritcoin_state)?;
+    Ok(())
 }
